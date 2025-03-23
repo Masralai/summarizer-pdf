@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PDF Summarizer Web App
 
-## Getting Started
+## 📝 Description
+This is a **PDF Summarizer Web App** built using **Next.js, TailwindCSS, and Flask**. The backend processes PDF files using **PyMuPDF** (fitz) to extract text and summarize it before returning the result to the frontend.
 
-First, run the development server:
+## 🎮 Features
+- Upload and process PDF files
+- Extract text using **PyMuPDF**
+- Summarize extracted text using NLP techniques
+- Responsive UI with **Next.js and TailwindCSS**
+- Fast and efficient backend with **Flask**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🛠️ Technologies Used
+### Frontend:
+- **React & Next.js** - Frontend framework with API routes
+- **TailwindCSS** - Styling and responsiveness
+- **TypeScript** - Type safety and maintainability
+
+### Backend:
+- **Flask** - Lightweight Python web framework for API
+- **PyMuPDF (fitz)** - PDF text extraction library
+- **NLTK** - Text summarization
+- **Requests** - Handling API requests
+
+## 📚 Installation
+### Clone the Repository
+```sh
+git clone https://github.com/your-username/pdf-summarizer.git
+```
+```sh
+cd pdf-summarizer
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Install Frontend Dependencies
+```sh
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Install Backend Dependencies
+Ensure you have **Python 3.8+** installed.
+```sh
+pip install flask pymupdf nltk
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Start the Flask Backend
+```sh
+python main.py
+```
 
-## Learn More
+### Start the Next.js Frontend
+```sh
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🚀 How to Use
+1. Open the app in a browser.
+2. Upload a PDF file.
+3. The backend extracts and summarizes text.
+4. The summarized text is displayed on the UI.
