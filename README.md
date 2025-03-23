@@ -44,7 +44,7 @@ pip install flask pymupdf nltk
 
 ### Start the Flask Backend
 ```sh
-python app.py
+python main.py
 ```
 
 ### Start the Next.js Frontend
