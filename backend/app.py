@@ -1,6 +1,9 @@
 from flask import Flask,request,jsonify
 from flask_cors import CORS #Allows frontend to talk to backend (different ports)
 
+import sys
+import datetime
+
 
 app = Flask(__name__)
 CORS(app)
@@ -9,19 +12,27 @@ CORS(app)
 def health_check(): #testing
     """
     This endpoint tells us if our backend is running correctly.
-    Every good API needs a health check endpoint for debugging.
     """    
     return jsonify({"status":"Backend is running!","message":"Flask server is healthy"})
+
+@app.route('/status',methods=['GET'])
+def server_status(): #server stats
+    """
+    information about the server(like current time, Python version, etc.)
+    """
+    return jsonify({
+            "time": datetime.datetime.now(),
+            "version":sys.version[:7]
+        })
+
 
 @app.route('/summarize',methods=['POST'])
 def summarize_pdf():
     """
     This will be our main endpoint for processing PDFs.
-    We use POST because we're sending data (the PDF file) to the server.
-    For now, it just returns a placeholder response.
     """   
     return jsonify({
-            "summary": "PDF processing coming soon!", 
+            "summary": "PDF processing soon!", 
             "status": "endpoint ready"
         })
 
