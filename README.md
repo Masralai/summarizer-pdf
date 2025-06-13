@@ -2,7 +2,7 @@
 
 A full-stack web application designed to intelligently condense PDF documents into concise summaries using various Natural Language Processing (NLP) algorithms. Built with a modern React/Next.js frontend and a robust Flask backend.
 
-[![Status: Active](https://img.shields.io/badge/Status-Active-brightgreen)](https://github.com/Masralai/pdf-summarizer)
+[![Status: Active](https://img.shields.io/badge/Status-Active-brightgreen)](https://github.com/Masralai/summarizer-pdf)
 [![Frontend: React 18+ / Next.js](https://img.shields.io/badge/Frontend-React%2018%2B%20%2F%20Next.js-blue)](https://nextjs.org/)
 [![Backend: Flask 2.0+ / Python 3.8+](https://img.shields.io/badge/Backend-Flask%202.0%2B%20%2F%20Python%203.8%2B-green)](https://flask.palletsprojects.com/)
 [![Language: TypeScript 4.0+](https://img.shields.io/badge/Language-TypeScript%204.0%2B-blue)](https://www.typescriptlang.org/)
