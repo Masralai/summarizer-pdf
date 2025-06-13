@@ -9,6 +9,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState<boolean>(false); // tracks processing
   const [error, setError] = useState<string>(""); //stores error messages
 
+
+  
   //handles file selection
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0] || null
