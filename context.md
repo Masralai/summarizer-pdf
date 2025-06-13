@@ -268,20 +268,314 @@ Now let's make your app actually read PDF files! This phase focuses on understan
 Step 1: Understanding PDF Text Extraction
 First, let's set up NLTK properly:
 
+"""
+This script downloads the NLTK data we need for text processing.
+NLTK requires certain datasets to be downloaded before use.
+Run this file once to set up NLTK properly.
+"""
+import nltk
+
+# Download required NLTK data
+# punkt: sentence tokenizer (splits text into sentences)
+# stopwords: common words like "the", "and", "is" that we often ignore in NLP
+# wordnet: dictionary for word meanings and synonyms
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+print("NLTK setup complete!")
+
+Step 2: Enhanced Backend with PDF Processing
+backend/app.py (updated with detailed explanations):
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import PyPDF2  # For reading PDF files
+import nltk    # Natural language processing
+from nltk.corpus import stopwords  # Common words to filter out
+from nltk.tokenize import sent_tokenize, word_tokenize  # Split text into sentences and words
+from nltk.frequency import FreqDist  # Count word frequencies
+import sys
+import datetime
+import io  # For handling file streams
+
+app = Flask(__name__)
+CORS(app)
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint - confirms server is running"""
+    return jsonify({"status": "Backend is running!", "message": "Flask server is healthy"})
+
+@app.route('/status', methods=['GET'])
+def server_status():
+    """Your challenge endpoint - shows server information"""
+    return jsonify({
+        "current_time": datetime.datetime.now().isoformat(),
+        "python_version": sys.version,
+        "server_status": "running",
+        "nltk_available": True
+    })
+
+def extract_text_from_pdf(pdf_file):
+    """
+    Extract text from a PDF file using PyPDF2.
+    
+    Args:
+        pdf_file: File object containing PDF data
+    
+    Returns:
+        str: Extracted text from all pages
+    """
+    try:
+        # Create a PDF reader object from the file
+        # We use io.BytesIO because the file comes as bytes from the web request
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_file))
+        
+        # Initialize empty string to store all text
+        text = ""
+        
+        # Loop through each page in the PDF
+        for page_num, page in enumerate(pdf_reader.pages):
+            # Extract text from current page
+            page_text = page.extract_text()
+            text += page_text + "\n"  # Add newline between pages
+            
+            print(f"Extracted {len(page_text)} characters from page {page_num + 1}")
+        
+        print(f"Total text extracted: {len(text)} characters")
+        return text
+        
+    except Exception as e:
+        print(f"Error extracting text from PDF: {str(e)}")
+        raise Exception(f"Failed to extract text from PDF: {str(e)}")
+
+def basic_summarize(text, num_sentences=3):
+    """
+    Create a basic summary using frequency analysis.
+    This is a simple summarization algorithm that:
+    1. Finds the most common important words
+    2. Scores sentences based on these words
+    3. Returns the highest-scoring sentences
+    
+    Args:
+        text (str): The text to summarize
+        num_sentences (int): Number of sentences to include in summary
+    
+    Returns:
+        str: The summarized text
+    """
+    try:
+        # Step 1: Clean and prepare the text
+        # Convert to lowercase for consistency
+        text_lower = text.lower()
+        
+        # Step 2: Split text into sentences
+        # sent_tokenize intelligently splits text at sentence boundaries
+        sentences = sent_tokenize(text)
+        print(f"Found {len(sentences)} sentences in the document")
+        
+        # Step 3: Split text into words and remove stopwords
+        # word_tokenize splits text into individual words
+        words = word_tokenize(text_lower)
+        
+        # Get English stopwords (common words like "the", "and", "is")
+        stop_words = set(stopwords.words('english'))
+        
+        # Filter out stopwords and non-alphabetic tokens
+        filtered_words = [word for word in words if word.isalpha() and word not in stop_words]
+        print(f"Filtered {len(words)} words down to {len(filtered_words)} meaningful words")
+        
+        # Step 4: Calculate word frequencies
+        # FreqDist counts how often each word appears
+        word_freq = FreqDist(filtered_words)
+        
+        # Get the most common words (these are likely important topics)
+        most_common_words = word_freq.most_common(10)
+        print(f"Most common words: {most_common_words}")
+        
+        # Step 5: Score each sentence based on important words
+        sentence_scores = {}
+        
+        for sentence in sentences:
+            # Convert sentence to lowercase and split into words
+            sentence_words = word_tokenize(sentence.lower())
+            
+            # Calculate score: how many important words does this sentence contain?
+            score = 0
+            for word in sentence_words:
+                if word in word_freq:
+                    # Add the frequency of this word to the sentence score
+                    score += word_freq[word]
+            
+            # Store the score for this sentence
+            sentence_scores[sentence] = score
+        
+        # Step 6: Select the top-scoring sentences
+        # Sort sentences by score (highest first)
+        ranked_sentences = sorted(sentence_scores.items(), key=lambda x: x[1], reverse=True)
+        
+        # Take the top N sentences
+        top_sentences = [sentence for sentence, score in ranked_sentences[:num_sentences]]
+        
+        # Join them back into a summary
+        summary = ' '.join(top_sentences)
+        
+        print(f"Generated summary with {len(top_sentences)} sentences")
+        return summary
+        
+    except Exception as e:
+        print(f"Error in summarization: {str(e)}")
+        raise Exception(f"Failed to create summary: {str(e)}")
+
+@app.route('/summarize', methods=['POST'])
+def summarize_pdf():
+    """
+    Main endpoint for PDF summarization.
+    Expects a PDF file in the request and returns a summary.
+    """
+    try:
+        # Step 1: Check if a file was uploaded
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+        
+        file = request.files['file']
+        
+        # Check if file is actually selected
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Step 2: Validate file type
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'Please upload a PDF file'}), 400
+        
+        print(f"Processing file: {file.filename}")
+        
+        # Step 3: Extract text from PDF
+        pdf_content = file.read()  # Read the file content as bytes
+        extracted_text = extract_text_from_pdf(pdf_content)
+        
+        # Check if we got any text
+        if not extracted_text or len(extracted_text.strip()) < 50:
+            return jsonify({'error': 'Could not extract enough text from PDF. The file might be image-based or corrupted.'}), 400
+        
+        # Step 4: Create summary
+        summary = basic_summarize(extracted_text)
+        
+        # Step 5: Return the results
+        return jsonify({
+            'success': True,
+            'filename': file.filename,
+            'original_length': len(extracted_text),
+            'summary_length': len(summary),
+            'summary': summary,
+            'word_count': len(extracted_text.split()),
+            'summary_word_count': len(summary.split())
+        })
+        
+    except Exception as e:
+        print(f"Error processing PDF: {str(e)}")
+        return jsonify({'error': f'Error processing PDF: {str(e)}'}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
+
+Step 3: Update Frontend to Handle File Uploads
+frontend/src/app/page.tsx (update the handleSubmit function):
+
+// Update the handleSubmit function in your existing file
+const handleSubmit = async () => {
+  /**
+   * This function now actually sends the PDF to our backend for processing.
+   * It uses FormData to send files via HTTP POST request.
+   */
+  if (!file) {
+    setError('Please select a PDF file first.')
+    return
+  }
+
+  // Validate file type (basic client-side validation)
+  if (file.type !== 'application/pdf') {
+    setError('Please select a valid PDF file.')
+    return
+  }
+
+  // Clear previous results
+  setError('')
+  setSummary('')
+  setIsLoading(true)
+
+  try {
+    // FormData is the standard way to send files via HTTP
+    // It's like filling out a web form with file attachments
+    const formData = new FormData()
+    formData.append('file', file)  // 'file' matches what our Flask backend expects
+
+    console.log('Sending file to backend:', file.name)
+
+    // Make POST request to our summarize endpoint
+    const response = await axios.post('http://localhost:5000/summarize', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',  // Tells server we're sending a file
+      },
+      // Optional: track upload progress
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1))
+        console.log(`Upload Progress: ${percentCompleted}%`)
+      }
+    })
+
+    // If successful, display the summary
+    if (response.data.success) {
+      setSummary(response.data.summary)
+      console.log('Summary generated:', {
+        originalLength: response.data.original_length,
+        summaryLength: response.data.summary_length,
+        wordCount: response.data.word_count,
+        summaryWordCount: response.data.summary_word_count
+      })
+    } else {
+      setError('Failed to generate summary')
+    }
+
+  } catch (error: any) {
+    console.error('Error processing PDF:', error)
+    
+    // Handle different types of errors
+    if (error.response) {
+      // Server responded with error status
+      setError(error.response.data.error || 'Server error occurred')
+    } else if (error.request) {
+      // Network error
+      setError('Cannot connect to server. Make sure the backend is running.')
+    } else {
+      // Other error
+      setError('An unexpected error occurred')
+    }
+  } finally {
+    setIsLoading(false)  // Always stop loading
+  }
+}
 
 
+Learning Milestone 2 🎯
+Goal: Understand PDF processing and basic NLP
 
+What you should accomplish:
 
+Run the NLTK setup: Execute python setup_nltk.py
+Test with a real PDF: Find a PDF file (like a research paper or article) and try summarizing it
+Understand the process:
+File upload → PDF text extraction → Word frequency analysis → Sentence scoring → Summary generation
+Learning Questions:
 
+What happens if you upload a very short PDF vs a long one?
+Why do we remove stopwords? Try commenting out the stopword filtering and see how it affects the summary.
+What's the difference between text extraction and summarization?
 
+ am getting this error, Error processing PDF: Failed to create summary: ** Resource [93mpunkt_tab[0m not found. Please use the NLTK Downloader to obtain the resource: [31m>>> import nltk >>> nltk.download('punkt_tab') [0m For more information see: https://www.nltk.org/data.html Attempted to load [93mtokenizers/punkt_tab/english/[0m Searched in: - 'C:\\Users\\devde/nltk_data' - 'C:\\Python312\\nltk_data' - 'C:\\Python312\\share\\nltk_data' - 'C:\\Python312\\lib\\nltk_data' - 'C:\\Users\\devde\\AppData\\Roaming\\nltk_data' - 'C:\\nltk_data' - 'D:\\nltk_data' - 'E:\\nltk_data'
 
-
-
-
-
-
-
-
+Perfect! This is a common NLTK issue. The error occurs because NLTK has updated its tokenizer models, and we need to download the newer punkt_tab model instead of just punkt.
 
 
 

@@ -86,14 +86,14 @@ def basic_summarize(text,num_sentences=3):
         ranked_sentences = sorted(sentence_scores.items(),key=lambda x:x[1],reverse=True) #sorting sentences by score (highest first)
 
         top_sentences = [sentence for sentence,score in ranked_sentences[:num_sentences]]
-        summary = ''.join(top_sentences)
+        summary = ' '.join(top_sentences)
 
         print(f"Generated summary with {len(top_sentences)} sentences")
         return summary
 
     except Exception as e:
         print(f"Error in summarization: {str(e)}")
-        raise Exception(f"Failed to craete summary:{str(e)}")
+        raise Exception(f"Failed to create summary:{str(e)}")
 
 
 @app.route('/summarize',methods=['POST'])
@@ -122,11 +122,11 @@ def summarize_pdf():
         extracted_text = extract_text_from_pdf(pdf_content)
 
         if not extracted_text or len(extracted_text.strip())<50:
-            return jsonify({'error':'could not extract enough text from PDF. file moight be image based or corrupt'}),400
+            return jsonify({'error':'could not extract enough text from PDF. file might be image based or corrupt'}),400
 
         #summarize
-        summary = summarize_pdf(extracted_text)
-        
+        summary = basic_summarize(extracted_text)
+
         #results are returned
         return jsonify({ 
             'success': True,
@@ -147,6 +147,8 @@ def summarize_pdf():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',port =5000,debug=True)
+
+
 
 
 

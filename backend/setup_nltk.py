@@ -7,14 +7,9 @@ import nltk
 # stopwords: common words like "the", "and", "is" that we often ignore in NLP
 # wordnet: dictionary for word meanings and synonyms
 
-nltk.download('punkt')
+nltk.download('punkt_tab')
 nltk.download('stopwords')
 nltk.download('wordnet')
 
 print('NLTK setup complete')
-
-
-
-
-
 

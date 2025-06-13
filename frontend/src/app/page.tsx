@@ -1,6 +1,7 @@
 "use client"; //(needed for useState)
 import { use, useState } from "react";
 import axios from "axios";
+import Silk from './Silk/Silk';
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null); //Stores PDF file
@@ -71,12 +72,12 @@ export default function Home() {
       if (response.data.success) {
         setSummary(response.data.summary)
         console.log('summary generated', {
-          originallength: response.data.original_length, 
-          summaryLength: response.data.summary_length, 
+          originallength: response.data.original_length,
+          summaryLength: response.data.summary_length,
           wordCount: response.data.word_count,
           summaryWordCount: response.data.summary_word_count
         })
-      }else{
+      } else {
         setError('Failed to generate summary')
       }
 
@@ -84,14 +85,14 @@ export default function Home() {
       console.error('Error processing PDF:', error)
 
       //error handling
-      if(error.response){
-        setError(error.response.data.error||'server error occured')
-      }else if(error.request){
+      if (error.response) {
+        setError(error.response.data.error || 'server error occured')
+      } else if (error.request) {
         setError('Cannot connect to server. Make sure the backend is running.')
-      }else{
+      } else {
         setError('An unexpected error occurred')
       }
-    }finally{
+    } finally {
       setIsLoading(false)
     }
 
@@ -116,6 +117,14 @@ export default function Home() {
 
   return (
     <div className="container mx-auto p-8 amx-w-4xl">
+      {/* <Silk
+        speed={5}
+        scale={1}
+        color="#7B7481"
+        noiseIntensity={1.5}
+        rotation={0}
+      ></Silk> */}
+
       {/* Main heading */}
       <h1 className="text-4xl font-bold mb-2 text-center">PDF summarizer</h1>
       <p className="text-gray-600 text-center mb-8">Upload a PDF and get it summarized</p>
@@ -125,7 +134,7 @@ export default function Home() {
         <h2 className="text-lg font-semibold mb-2">Backend Connection Test</h2>
         <button onClick={testConnection} disabled={isLoading} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded disabled:bg-gray-400">{isLoading ? 'Testing...' : 'Test Backend Connection'}</button>
         {/* server status*/}
-        <button onClick={serverStat} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded disabled:bg-gray-400">Server Status</button>
+        {/* <button onClick={serverStat} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded disabled:bg-gray-400">Server Status</button> */}
 
         <p className="text-sm text-gray-600 mt-2">to verify backend is running</p>
       </div>
@@ -169,7 +178,7 @@ export default function Home() {
       {/* Summary */}
       {summary && (
         <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-lg">
-          <h2 className="text-xl font-bold mb-4 text-green-800">📝 Summary</h2>
+          <h2 className="text-xl font-bold mb-4 text-green-800">Summary</h2>
           <div className="prose max-w-none">
             <p className="text-gray-800 leading-relaxed">{summary}</p>
           </div>
