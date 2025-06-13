@@ -7,10 +7,13 @@ from nltk.tokenize import sent_tokenize,word_tokenize # Split text into sentence
 from nltk.probability import FreqDist # Count word frequencies
 import sys
 import datetime
-import io # for handling file streams 
+import io 
+from adv_summ import AdvSummarizer #tdidf , textrank , freqdist
 
 app = Flask(__name__)
 CORS(app)
+
+summarizer = AdvSummarizer()
 
 @app.route('/health',methods=['GET'])
 def health_check(): #testing
@@ -28,7 +31,12 @@ def server_status(): #server stats
             "time": datetime.datetime.now(),
             "version":sys.version[:7],
             "server_status":"running",
-            "nltk_available":True
+            "nltk_available":True,
+            "advanced_features": {
+                "algorithms": ["frequency", "tfidf", "textrank"],
+                "sentence_range": "2-10 sentences",
+                "features": ["length_control", "algorithm_selection", "statistics"]
+            }
         })
 
 def extract_text_from_pdf(pdf_file):
@@ -48,7 +56,7 @@ def extract_text_from_pdf(pdf_file):
         print(f"Error extracting text from PDF: {str(e)}")
         raise Exception(f"failed to extract text from PDF: {str(e)}")
 
-def basic_summarize(text,num_sentences=3):
+def basic_summarize(text,num_sentences=3): # kept here aswell for compatibility
     """
     Create a basic summary using frequency analysis.
 
@@ -64,9 +72,7 @@ def basic_summarize(text,num_sentences=3):
         print(f"Found {len(sentences)} sentences in the document")
 
         words = word_tokenize(text_lower) #splits text into individual words 
-
         stop_words = set(stopwords.words('english')) #set of english stopwords
-
         filtered_words = [word for word in words if word.isalpha() and word not in stop_words]
         print(f"Filtered {len(words)} words down to {len(filtered_words)} meaningful words")
         
@@ -83,8 +89,8 @@ def basic_summarize(text,num_sentences=3):
                 if word in word_freq:
                     score +=word_freq[word] #Add the frequency of this word to the sentence score
             sentence_scores[sentence] = score #store the score for this sentence
+        
         ranked_sentences = sorted(sentence_scores.items(),key=lambda x:x[1],reverse=True) #sorting sentences by score (highest first)
-
         top_sentences = [sentence for sentence,score in ranked_sentences[:num_sentences]]
         summary = ' '.join(top_sentences)
 
@@ -116,6 +122,22 @@ def summarize_pdf():
             return jsonify({'error':'please upload a pdf file'}),400
 
         print(f"Processing file: {file.filename}")
+        
+        #get summarization params from request
+        algorithm = request.form.get('algorithm','frequency')
+        try:
+            num_sentences = int(request.form.get('num_sentences',3))
+        except (ValueError, TypeError):
+            num_sentences =3
+
+        # validate algo chosen
+        valid_algorithm = ['frequency','tfidf','textrank']
+        if algorithm not in valid_algorithm:
+            algorithm = 'frequency'
+
+        num_sentences = max(2,min(10,num_sentences)) #clamping
+        print(f"Processing file: {file.filename}")
+        print(f"Algorithm: {algorithm}, Sentences: {num_sentences}")
 
         #text extraction
         pdf_content = file.read()
@@ -125,24 +147,68 @@ def summarize_pdf():
             return jsonify({'error':'could not extract enough text from PDF. file might be image based or corrupt'}),400
 
         #summarize
-        summary = basic_summarize(extracted_text)
+        summary_result = summarizer.generate_summary(
+            text = extracted_text,
+            method = algorithm,
+            num_sentences = num_sentences
+        )
 
         #results are returned
         return jsonify({ 
             'success': True,
             'filename': file.filename,
-            'original_length': len(extracted_text),
-            'summary_length': len(summary),
-            'summary': summary,
-            'word_count': len(extracted_text.split()),
-            'summary_word_count': len(summary.split())
+            'summary': summary_result['summary'],
+            'algorithm_used': summary_result['algorithm'],
+            'statistics': {
+                'original_length': len(extracted_text),
+                'summary_length': len(summary_result['summary']),
+                'original_word_count': summary_result['original_word_count'],
+                'summary_word_count': summary_result['summary_word_count'],
+                'original_sentences': summary_result['original_sentences'],
+                'summary_sentences': summary_result['sentences_requested'],
+                'compression_ratio': summary_result['compression_ratio']
+            },
+            'parameters': {
+                'algorithm': algorithm,
+                'num_sentences': num_sentences
+            }
         })
     except Exception as e:
         print(f"Error processing PDF: {str(e)}")
         return jsonify({'error':f'error processing pdf :{str(e)}'}),500
 
-
-
+@app.route('/algorithms',methods=['GET'])
+def get_algorithm():
+    """
+    endpoint for algo description
+    """
+    algorithms = {
+        'frequency': {
+            'name': 'Frequency Analysis',
+            'description': 'Scores sentences based on word frequency. Fast and simple.',
+            'best_for': 'General documents, quick summaries'
+        },
+        'tfidf': {
+            'name': 'TF-IDF',
+            'description': 'Uses Term Frequency-Inverse Document Frequency to find important sentences.',
+            'best_for': 'Technical documents, identifying key concepts'
+        },
+        'textrank': {
+            'name': 'TextRank',
+            'description': 'Graph-based algorithm similar to PageRank. Finds sentences that are similar to many others.',
+            'best_for': 'Academic papers, complex documents with interconnected ideas'
+        }
+    }
+    
+    return jsonify({
+        'algorithms': algorithms,
+        'default': 'frequency',
+        'sentence_range': {
+            'min': 2,
+            'max': 10,
+            'default': 3
+        }
+    })
 
 
 if __name__ == '__main__':

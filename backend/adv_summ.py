@@ -191,13 +191,13 @@ class AdvSummarizer:
        
         if method == 'tfidf':
             summary = self.tfidf_summarize(text,num_sentences)
-            algo_used = "TF-IDF (Term Frequency-Inverse Document Frequency)"
+            algorithm_used = "TF-IDF (Term Frequency-Inverse Document Frequency)"
         elif method == 'textrank':
             summary = self.textrank_summarizer(text,num_sentences)
-            algo_used = "TextRank (Graph-based ranking)"
+            algorithm_used = "TextRank (Graph-based ranking)"
         else:
             summary = self.frequency_summarize(text,num_sentences)
-            algo_used = "Frequency Analysis"
+            algorithm_used = "Frequency Analysis"
             
         # calc compression ratio
         original_sentences = len(sent_tokenize(text))
@@ -205,7 +205,7 @@ class AdvSummarizer:
                 
         return {
             'summary': summary,
-            'algorithm': algo_used,
+            'algorithm': algorithm_used,
             'sentences_requested': num_sentences,
             'original_sentences': original_sentences,
             'compression_ratio': round(compression_ratio, 2),
