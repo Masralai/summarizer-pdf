@@ -45,16 +45,60 @@ export default function Home() {
       setError('please selct a valid PDF file')
       return
     }
-    console.log('Ready to process file:', {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    })
-    alert(`File "${file.name}" ready for processing `)
+
+    //clear prev results
+    setError('')
+    setSummary('')
+    setIsLoading(true)
+
+    try {
+      const formData = new FormData() //standard way to send files via HTTP
+      formData.append('file', file)
+      console.log('sending file to backend:', file.name)
+
+      //POST request to our summarize endpoint
+      const response = await axios.post('http://localhost:5000/summarize', formData, {
+        headers: {
+          "Content-Type": 'multipart/form-data' //Tells server we're sending a file
+        },
+        //to track upload progress
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1))
+          console.log(`upload progress : ${percentCompleted}%`)
+        }
+      })
+
+      if (response.data.success) {
+        setSummary(response.data.summary)
+        console.log('summary generated', {
+          originallength: response.data.original_length, 
+          summaryLength: response.data.summary_length, 
+          wordCount: response.data.word_count,
+          summaryWordCount: response.data.summary_word_count
+        })
+      }else{
+        setError('Failed to generate summary')
+      }
+
+    } catch (error: any) {
+      console.error('Error processing PDF:', error)
+
+      //error handling
+      if(error.response){
+        setError(error.response.data.error||'server error occured')
+      }else if(error.request){
+        setError('Cannot connect to server. Make sure the backend is running.')
+      }else{
+        setError('An unexpected error occurred')
+      }
+    }finally{
+      setIsLoading(false)
+    }
+
   }
 
   //server status
-    const serverStat = async () => {
+  const serverStat = async () => {
     try {
       setIsLoading(true)
       const response = await axios.get('http://localhost:5000/status')
@@ -81,8 +125,8 @@ export default function Home() {
         <h2 className="text-lg font-semibold mb-2">Backend Connection Test</h2>
         <button onClick={testConnection} disabled={isLoading} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded disabled:bg-gray-400">{isLoading ? 'Testing...' : 'Test Backend Connection'}</button>
         {/* server status*/}
-        <button onClick={serverStat}className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded disabled:bg-gray-400">Server Status</button>
-        
+        <button onClick={serverStat} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded disabled:bg-gray-400">Server Status</button>
+
         <p className="text-sm text-gray-600 mt-2">to verify backend is running</p>
       </div>
 
