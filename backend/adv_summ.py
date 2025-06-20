@@ -2,16 +2,21 @@
 Advanced summarization algorithms for better PDF summaries
 This module implements TF-IDF and TextRank algorithms alongside the basic frequency method
 """
-
+import os
+from dotenv import load_dotenv
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize,word_tokenize
 from nltk.probability import  FreqDist
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+import google.generativeai as genai
 import numpy as np
 import re
 from collections import Counter
+
+load_dotenv()
+
 
 class AdvSummarizer:
     def __init__(self):
@@ -179,7 +184,36 @@ class AdvSummarizer:
         
         except Exception as e:
             raise Exception(f"TextRank summarization failed : {str(e)}")
-            
+    
+        
+    def llm_summarizer(self,text,num_sentences=3):
+        GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+        if not GOOGLE_API_KEY:
+            raise ValueError("GOOGLE_API_KEY not found in environment variables or .env file.")
+        genai.configure(api_key=GOOGLE_API_KEY)
+        MODEL_NAME = "gemini-2.0-flash"
+        
+        
+        try:
+            model = genai.GenerativeModel(model_name=MODEL_NAME)
+
+            prompt = f"""Please read the following document text and provide a comprehensive, concise summary. 
+                        Highlight the main arguments, key findings, important conclusions, and any significant data points. 
+                        Organize the summary into clear, readable paragraphs. Also get direct to-the-point and instaed of here is a summary..."
+                        {text}
+                        """
+            response = model.generate_content(
+                    prompt,
+                    generation_config=genai.GenerationConfig(
+                        temperature=0.4, # Lower temperature for more factual, less creative summary
+                        max_output_tokens=1024*num_sentences #  summary length
+                    )
+            )
+            return response.text
+        except Exception as e:
+            print(f"Error summarizing text with Gemini: {e}")
+            return f"Failed to generate summary due to an API error: {e}"
+   
     
     def generate_summary(self,text,method='frequency',num_sentences=3):
         """
@@ -195,9 +229,12 @@ class AdvSummarizer:
         elif method == 'textrank':
             summary = self.textrank_summarizer(text,num_sentences)
             algorithm_used = "TextRank"
-        else:
+        elif method == 'frequency':
             summary = self.frequency_summarize(text,num_sentences)
             algorithm_used = "Frequency Analysis"
+        else:
+            summary = self.llm_summarizer(text,num_sentences)
+            algorithm_used = "llm"
             
         # calc compression ratio
         original_sentences = len(sent_tokenize(text))

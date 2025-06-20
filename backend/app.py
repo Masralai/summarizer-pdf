@@ -8,7 +8,7 @@ from nltk.probability import FreqDist # Count word frequencies
 import sys
 import datetime
 import io 
-from adv_summ import AdvSummarizer #tdidf , textrank , freqdist
+from adv_summ import AdvSummarizer #tdidf , textrank , freqdist, gemini-2.0-flash
 
 
 app = Flask(__name__)
@@ -125,16 +125,16 @@ def summarize_pdf():
         print(f"Processing file: {file.filename}")
         
         #get summarization params from request
-        algorithm = request.form.get('algorithm','frequency')
+        algorithm = request.form.get('algorithm','llm')
         try:
             num_sentences = int(request.form.get('num_sentences',3))
         except (ValueError, TypeError):
             num_sentences =3
 
         # validate algo chosen
-        valid_algorithm = ['frequency','tfidf','textrank']
+        valid_algorithm = ['frequency','tfidf','textrank','llm']
         if algorithm not in valid_algorithm:
-            algorithm = 'frequency'
+            algorithm = 'llm'
 
         num_sentences = max(2,min(10,num_sentences)) #clamping
         print(f"Processing file: {file.filename}")
@@ -148,6 +148,7 @@ def summarize_pdf():
             return jsonify({'error':'could not extract enough text from PDF. file might be image based or corrupt'}),400
 
         #summarize
+        
         summary_result = summarizer.generate_summary(
             text = extracted_text,
             method = algorithm,
@@ -198,6 +199,11 @@ def get_algorithm():
             'name': 'TextRank',
             'description': 'Graph-based algorithm similar to PageRank. Finds sentences that are similar to many others.',
             'best_for': 'Academic papers, complex documents with interconnected ideas'
+        },
+        'llm':{
+            'name': 'LLM-Based',
+            'description': 'Utilizes advanced LLMs to understand the content and generate new, coherent summaries.',
+            'best_for': 'Ideal for complex texts where deep understanding, cross-document synthesis, and rephrasing are required.'
         }
     }
     
@@ -213,7 +219,7 @@ def get_algorithm():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',port =5000,debug=True)
+    app.run(host='127.0.0.1',port =5000,debug=True)
 
 
 

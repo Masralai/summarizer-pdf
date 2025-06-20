@@ -220,6 +220,7 @@ export default function Home() {
               <option value="frequency">Frequency Analysis (Fast)</option>
               <option value="tfidf">TF-IDF (Balanced)</option>
               <option value="textrank">TextRank (Advanced)</option>
+              <option value="llm">LLM-Based (Advanced)</option>
             </select>
 
             {/* Algorithm description */}
@@ -237,7 +238,7 @@ export default function Home() {
           </div>
 
           {/* Summary Length Control */}
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Summary Length: {numSentences} sentences
             </label>
@@ -254,7 +255,7 @@ export default function Home() {
               <span>6 (Balanced)</span>
               <span>10 (Detailed)</span>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -449,6 +450,9 @@ export default function Home() {
           <li>
             <strong>TextRank:</strong> Best for academic papers, finds
             interconnected ideas
+          </li>
+          <li>
+            <strong>LLM-based:</strong> Detailed and versatile approach for everyday tasks
           </li>
           <li>
             <strong>Length Control:</strong> 2-3 sentences for brief, 5-7 for
