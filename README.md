@@ -1,15 +1,10 @@
-# 📄 PDF Summarizer: AI-Powered Document Summarization
+# PDF Summarizer: AI-Powered Document Summarization
 
-A full-stack web application designed to intelligently condense PDF documents into concise summaries using various Natural Language Processing (NLP) algorithms. Built with a modern React/Next.js frontend and a robust Flask backend.
-
-[![Status: Active](https://img.shields.io/badge/Status-Active-brightgreen)](https://github.com/Masralai/summarizer-pdf)
-[![Frontend: React 18+ / Next.js](https://img.shields.io/badge/Frontend-React%2018%2B%20%2F%20Next.js-blue)](https://nextjs.org/)
-[![Backend: Flask 2.0+ / Python 3.8+](https://img.shields.io/badge/Backend-Flask%202.0%2B%20%2F%20Python%203.8%2B-green)](https://flask.palletsprojects.com/)
-[![Language: TypeScript 4.0+](https://img.shields.io/badge/Language-TypeScript%204.0%2B-blue)](https://www.typescriptlang.org/)
+A full-stack web application designed to intelligently condense PDF documents into concise summaries using various Natural Language Processing (NLP) algorithms and cutting-edge AI models. Built with a modern React/Next.js frontend and a robust Flask backend.
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 This application empowers users to quickly grasp the essence of lengthy PDF documents through a range of powerful features:
 
@@ -17,16 +12,16 @@ This application empowers users to quickly grasp the essence of lengthy PDF docu
   - **Frequency-Based:** Ideal for general content, focusing on most recurring terms.
   - **TF-IDF (Term Frequency-Inverse Document Frequency):** Emphasizes unique and important words, great for technical texts.
   - **TextRank Algorithm:** A sophisticated graph-based method for highly coherent and context-aware summaries.
+  - **Gemini 2.0 Flash API:** State-of-the-art AI-powered summarization with natural language understanding and contextual awareness.
 - **Intuitive User Interface:** A sleek, responsive, and easy-to-use experience built with React and TypeScript.
 - **Real-time Processing:** Get instant summaries thanks to efficient PDF text extraction and on-the-fly NLP.
+- **Advanced AI Integration:** Leverage Google's latest Gemini 2.0 Flash model for human-like summary generation.
 - **Robust Error Handling:** Clear feedback for invalid inputs or processing issues.
 - **Scalable RESTful API:** A well-defined backend for seamless communication and future expansion.
 
 ---
 
----
-
-## 🚀 Get Started
+##  Get Started
 
 Follow these simple steps to set up and run the PDF Summarizer on your local machine.
 
@@ -38,6 +33,7 @@ Ensure you have the following installed:
 - **npm** or **yarn** (for frontend package management)
 - **Python**: v3.8 or higher (for backend)
 - **pip** (Python package manager, usually comes with Python)
+- **Google AI API Key**: Required for Gemini 2.0 Flash integration
 
 ### Installation Steps
 
@@ -69,6 +65,10 @@ Ensure you have the following installed:
    # Download necessary NLTK data (punkt for tokenization, stopwords for filtering)
    python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
 
+   # Set up environment variables for Gemini API
+   # Create a .env file in the backend directory
+   echo "GEMINI_API_KEY=your_gemini_api_key_here" > .env
+   
    # Start the Flask development server
    python app.py
    ```
@@ -94,9 +94,18 @@ Ensure you have the following installed:
 
    The frontend application will be available at: `http://localhost:3000`
 
+4. **API Key Configuration:**
+
+   To use the Gemini 2.0 Flash summarization:
+   - Visit [Google AI Studio](https://ai.google.dev/) to obtain your API key
+   - Add your API key to the `.env` file in the backend directory:
+     ```
+     GEMINI_API_KEY=your_actual_api_key_here
+     ```
+
 ---
 
-## ⚙️ Technologies Utilized
+##  Technologies Utilized
 
 This project leverages a modern and robust tech stack for both its frontend and backend components.
 
@@ -116,10 +125,12 @@ This project leverages a modern and robust tech stack for both its frontend and 
 - **Scikit-learn**: Provides robust implementations for machine learning algorithms, specifically for TF-IDF calculation.
 - **NumPy**: Fundamental package for numerical computing in Python, underpinning Scikit-learn.
 - **Flask-CORS**: Handles Cross-Origin Resource Sharing, allowing the frontend to communicate with the backend.
+- **Google Generative AI**: Integration with Gemini 2.0 Flash API for advanced AI-powered summarization.
+- **python-dotenv**: Environment variable management for secure API key handling.
 
 ---
 
-## 🧠 Summarization Algorithms Explained
+##  Summarization Algorithms Explained
 
 Each algorithm offers a unique approach to condensing text, making them suitable for different types of documents and desired summary characteristics.
 
@@ -128,56 +139,44 @@ Each algorithm offers a unique approach to condensing text, making them suitable
 | **Frequency-Based** | Ranks sentences based on the frequency of important words.                                                                                        | General articles, quick overviews.                               | ⚡⚡⚡ (Fast)      | ⭐⭐ (Basic)         |
 | **TF-IDF**          | Evaluates word importance by comparing term frequency in a document to its inverse document frequency across a corpus.                            | Technical documents, research papers, specialized content.       | ⚡⚡ (Moderate)    | ⭐⭐⭐ (Good)        |
 | **TextRank**        | A graph-based ranking algorithm (like PageRank for text) that identifies central sentences based on their semantic similarity to other sentences. | Complex documents, highly interconnected ideas, narrative texts. | ⚡ (Comprehensive) | ⭐⭐⭐⭐ (Excellent) |
+| **Gemini 2.0 Flash** | Google's advanced multimodal AI model that understands context, nuance, and generates human-like summaries with natural language processing.      | All document types, conversational summaries, detailed analysis. | ⚡⚡ (Fast)       | ⭐⭐⭐⭐⭐ (Outstanding) |
 
 ---
 
-## 🌐 API Endpoints
+##  Environment Variables
 
-The backend exposes a clear RESTful API for interaction.
+Create a `.env` file in the backend directory with the following variables:
 
-### 1. Health Check
+```env
+# Required for Gemini 2.0 Flash API
+GEMINI_API_KEY=your_gemini_api_key_here
 
-Verifies if the backend server is running and responsive.
-
-- **Endpoint**: `/health`
-- **Method**: `GET`
-- **Response (JSON)**:
-
-  ```json
-  {
-    "status": "Backend is running!"
-  }
-  ```
-
-### 2. PDF Summarization
-
-Uploads a PDF and generates a summary based on the specified algorithm and sentence count.
-
-- **Endpoint**: `/summarize`
-- **Method**: `POST`
-- **Content-Type**: `multipart/form-data`
-- **Parameters**:
-  - `file`: The PDF document to be summarized (required).
-  - `algorithm`: The summarization algorithm to use. Accepted values: `frequency`, `tfidf`, `textrank` (required).
-  - `num_sentences`: The desired number of sentences in the generated summary (optional, default: 3).
-- **Response (JSON)**:
-
-  ```json
-  {
-    "success": true,
-    "summary": "This is the generated summary text from your PDF document, providing a concise overview of the main points.",
-    "algorithm_used": "textrank",
-    "processing_time": 2.15
-  }
-  ```
-
-  - **Error Response Example:**
-
-    ```json
-    {
-      "success": false,
-      "error": "No PDF file provided or unsupported file type."
-    }
-    ```
+# Optional: Flask configuration
+FLASK_ENV=development
+FLASK_DEBUG=True
+```
 
 ---
+
+##  Usage Tips
+
+### Choosing the Right Algorithm:
+
+- **Quick Overviews**: Use **Frequency-Based** for fast, basic summaries
+- **Technical Documents**: Use **TF-IDF** for research papers, manuals, and specialized content
+- **Academic Papers**: Use **TextRank** for papers with interconnected concepts
+- **Best Quality**: Use **Gemini 2.0 Flash** for the most natural, contextually aware summaries
+- **All-Purpose**: **Gemini 2.0 Flash** works excellently across all document types
+
+### Performance Considerations:
+
+- Traditional algorithms (Frequency, TF-IDF, TextRank) process documents locally
+- Gemini 2.0 Flash requires internet connection and API quota
+- For large documents, consider chunking strategies when using the Gemini API
+
+---
+
+##  Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+
