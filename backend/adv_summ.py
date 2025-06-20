@@ -78,7 +78,7 @@ class AdvSummarizer:
             
             #Maintain original order of sentences in the summary
             ordered_sentences=[]
-            for sentence in sentence:
+            for sentence in sentences:
                 if sentence in top_sentences:
                     ordered_sentences.append(sentence)
 
@@ -130,7 +130,7 @@ class AdvSummarizer:
     def textrank_summarizer(self,text,num_sentences=3):
         """
         TextRank algorithm for extractive summarization
-        Similar to PageRank but for sentences - sentences that are similar to many others get higher scores
+        Similar to PageRank but for sentences, sentences that are similar to many others get higher scores
         """           
             
         try:
@@ -191,17 +191,17 @@ class AdvSummarizer:
        
         if method == 'tfidf':
             summary = self.tfidf_summarize(text,num_sentences)
-            algorithm_used = "TF-IDF (Term Frequency-Inverse Document Frequency)"
+            algorithm_used = "TF-IDF"
         elif method == 'textrank':
             summary = self.textrank_summarizer(text,num_sentences)
-            algorithm_used = "TextRank (Graph-based ranking)"
+            algorithm_used = "TextRank"
         else:
             summary = self.frequency_summarize(text,num_sentences)
             algorithm_used = "Frequency Analysis"
             
         # calc compression ratio
         original_sentences = len(sent_tokenize(text))
-        compression_ratio = (num_sentences/original_sentences)*100 if original_sentences>0 else 0
+        compression_ratio = (len(summary)/len(text))*100 if original_sentences>0 else 0
                 
         return {
             'summary': summary,
