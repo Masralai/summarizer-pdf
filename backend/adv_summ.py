@@ -24,14 +24,23 @@ class AdvSummarizer:
             self.stop_words = set(stopwords.words('english'))
         except LookupError:
             nltk.download('stopwords')
+            nltk.download('punkt')
+            nltk.download('punkt_tab')
             self.stop_words = set(stopwords.words('english'))
             
         custom_stops = {'said', 'say', 'also', 'would', 'could', 'one', 'two', 'first', 'may', 'way', 'get', 'go'}
         self.stop_words.update(custom_stops)
+
+        # Initialize Gemini once
+        self.google_api_key = os.getenv("GOOGLE_API_KEY")
+        self.model = None
+        if self.google_api_key:
+            genai.configure(api_key=self.google_api_key)
+            self.model = genai.GenerativeModel(model_name="gemini-2.0-flash")
         
     def clean_text(self,text):
-        #white space ,PDF artifacts,page numbers removed
-        text= re.sub(r'/s+',' ',text.strip())
+        # white space, PDF artifacts, page numbers removed
+        text = re.sub(r'\s+',' ',text.strip())
         text = re.sub(r'page \d+', '', text, flags=re.IGNORECASE)
         text = re.sub(r'\d+/\d+', '', text)
         
@@ -187,22 +196,16 @@ class AdvSummarizer:
     
         
     def llm_summarizer(self,text,num_sentences=3):
-        GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-        if not GOOGLE_API_KEY:
-            raise ValueError("GOOGLE_API_KEY not found in environment variables or .env file.")
-        genai.configure(api_key=GOOGLE_API_KEY)
-        MODEL_NAME = "gemini-2.0-flash"
-        
+        if not self.model:
+            return "Neural summarization is not configured. Please provide a GOOGLE_API_KEY."
         
         try:
-            model = genai.GenerativeModel(model_name=MODEL_NAME)
-
             prompt = f"""Please read the following document text and provide a comprehensive, concise summary. 
                         Highlight the main arguments, key findings, important conclusions, and any significant data points. 
-                        Organize the summary into clear, readable paragraphs. Also get direct to-the-point and instaed of here is a summary..."
+                        Organize the summary into clear, readable paragraphs. Also get direct to-the-point and instead of 'here is a summary...'
                         {text}
                         """
-            response = model.generate_content(
+            response = self.model.generate_content(
                     prompt,
                     generation_config=genai.GenerationConfig(
                         temperature=0.4, # Lower temperature for more factual, less creative summary
