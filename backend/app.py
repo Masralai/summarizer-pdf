@@ -5,13 +5,12 @@ import logging
 import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import PyPDF2
+import pypdf
 from dotenv import load_dotenv
 
-# Local imports
 from adv_summ import AdvSummarizer
+from schemas import SummarizeRequest, FileValidation
 
-# Load environment variables
 load_dotenv()
 
 # Configure logging
@@ -41,23 +40,10 @@ def health_check():
         "service": "pdf-summarizer-backend"
     })
 
-@app.route('/status', methods=['GET'])
-def server_status():
-    """Extended server status information."""
-    return jsonify({
-        "time": datetime.datetime.now().isoformat(),
-        "python_version": sys.version.split()[0],
-        "server_status": "running",
-        "features": {
-            "algorithms": ["frequency", "tfidf", "textrank", "llm"],
-            "sentence_range": {"min": 2, "max": 10}
-        }
-    })
-
 def extract_text_from_pdf(pdf_stream):
     """Surgical extraction of text from PDF bytes with fallback and cleaning."""
     try:
-        reader = PyPDF2.PdfReader(io.BytesIO(pdf_stream))
+        reader = pypdf.PdfReader(io.BytesIO(pdf_stream))
         text = []
         for page_num, page in enumerate(reader.pages):
             try:
@@ -85,22 +71,26 @@ def summarize_pdf():
             return jsonify({'error': 'No file uploaded'}), 400
 
         file = request.files['file']
-        if not file or file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
 
-        if not file.filename.lower().endswith('.pdf'):
-            return jsonify({'error': 'Invalid file type. Please upload a PDF.'}), 400
-
-        algorithm = request.form.get('algorithm', 'llm')
         try:
-            num_sentences = int(request.form.get('num_sentences', 3))
+            body = SummarizeRequest(
+                algorithm=request.form.get('algorithm', 'llm'),
+                num_sentences=int(request.form.get('num_sentences', 3)),
+            )
         except (ValueError, TypeError):
-            num_sentences = 3
+            return jsonify({'error': 'Invalid request parameters'}), 400
 
-        # Clamp sentence count
-        num_sentences = max(2, min(10, num_sentences))
-        
-        logger.info(f"Processing request: File={file.filename}, Algo={algorithm}, Sentences={num_sentences}")
+        try:
+            FileValidation.validate_file(
+                file.filename,
+                file.seek(0, 2),
+                file.content_type,
+            )
+            file.seek(0)
+        except ValueError as ve:
+            return jsonify({'error': str(ve)}), 400
+
+        logger.info(f"Processing request: File={file.filename}, Algo={body.algorithm}, Sentences={body.num_sentences}")
 
         pdf_content = file.read()
         extracted_text = extract_text_from_pdf(pdf_content)
@@ -110,8 +100,8 @@ def summarize_pdf():
 
         summary_result = summarizer.generate_summary(
             text=extracted_text,
-            method=algorithm,
-            num_sentences=num_sentences
+            method=body.algorithm,
+            num_sentences=body.num_sentences
         )
 
         return jsonify({
@@ -129,46 +119,14 @@ def summarize_pdf():
                 'compression_ratio': summary_result['compression_ratio']
             },
             'parameters': {
-                'algorithm': algorithm,
-                'num_sentences': num_sentences
+                'algorithm': body.algorithm,
+                'num_sentences': body.num_sentences
             }
         })
 
     except Exception as e:
         logger.exception("Internal error during summarization")
         return jsonify({'error': f'Server error: {str(e)}'}), 500
-
-@app.route('/algorithms', methods=['GET'])
-def get_algorithms_info():
-    """Metadata for frontend to display algorithm details."""
-    return jsonify({
-        'algorithms': {
-            'frequency': {
-                'name': 'Frequency Analysis',
-                'description': 'Scores sentences based on word frequency. Fast and simple.',
-                'best_for': 'General documents'
-            },
-            'tfidf': {
-                'name': 'TF-IDF',
-                'description': 'Uses statistical word importance (Term Frequency-Inverse Document Frequency).',
-                'best_for': 'Technical documents'
-            },
-            'textrank': {
-                'name': 'TextRank',
-                'description': 'Graph-based algorithm similar to PageRank. Finds interconnected ideas.',
-                'best_for': 'Academic papers'
-            },
-            'llm': {
-                'name': 'Neural (LLM)',
-                'description': 'Advanced generative summary using Gemini 2.0 Flash.',
-                'best_for': 'Complex texts requiring understanding'
-            }
-        },
-        'defaults': {
-            'algorithm': 'llm',
-            'sentence_range': {'min': 2, 'max': 10, 'default': 3}
-        }
-    })
 
 if __name__ == '__main__':
     # Use environment variable for port, default to 5000

@@ -8,6 +8,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-syne);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-newsreader);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -27,66 +28,110 @@
 }
 
 :root {
-  --radius: 0.5rem;
-  --background: oklch(0.12 0.01 220);
-  --foreground: oklch(0.98 0.01 220);
-  --primary: #0F766E;
-  --primary-foreground: oklch(0.98 0.01 220);
-  --secondary: oklch(0.18 0.02 220);
-  --secondary-foreground: oklch(0.98 0.01 220);
-  --muted: oklch(0.18 0.02 220);
-  --muted-foreground: oklch(0.7 0.01 220);
-  --accent: #0F766E;
-  --accent-foreground: oklch(0.98 0.01 220);
-  --destructive: oklch(0.6 0.2 20);
-  --border: oklch(0.25 0.02 220);
-  --input: oklch(0.2 0.02 220);
-  --ring: #0F766E;
-}
-
-.dark {
-  --background: oklch(0.1 0.01 220);
-  --foreground: oklch(0.98 0.01 220);
-  --primary: #0F766E;
-  --primary-foreground: oklch(0.98 0.01 220);
-  --secondary: oklch(0.15 0.02 220);
-  --secondary-foreground: oklch(0.98 0.01 220);
-  --muted: oklch(0.15 0.02 220);
-  --muted-foreground: oklch(0.6 0.01 220);
-  --accent: #0F766E;
-  --accent-foreground: oklch(0.98 0.01 220);
-  --destructive: oklch(0.5 0.2 20);
-  --border: oklch(0.2 0.02 220);
-  --input: oklch(0.2 0.02 220);
-  --ring: #0F766E;
+  --radius: 6px;
+  --background: #0A0A0A;
+  --foreground: #E5E5E5;
+  --primary: #D4A574;
+  --primary-foreground: #0A0A0A;
+  --secondary: #1A1A1A;
+  --secondary-foreground: #E5E5E5;
+  --muted: #141414;
+  --muted-foreground: #737373;
+  --accent: #D4A574;
+  --accent-foreground: #0A0A0A;
+  --destructive: #DC2626;
+  --border: #262626;
+  --input: #1A1A1A;
+  --ring: #D4A574;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/30;
+    @apply border-border;
   }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply bg-[#050505] text-foreground selection:bg-primary/30 selection:text-primary;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  ::selection {
+    background-color: rgba(212, 165, 116, 0.2);
+    color: #E5E5E5;
   }
 }
 
 @layer components {
-  .grid-background {
-    background-size: 60px 60px;
-    background-image: linear-gradient(to right, oklch(1 0 0 / 0.02) 1px, transparent 1px),
-                      linear-gradient(to bottom, oklch(1 0 0 / 0.02) 1px, transparent 1px);
+  .editorial-grid {
+    background-size: 40px 40px;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
   }
 
-  .glass-card {
-    @apply bg-[#0A0A0A] border border-border/40 shadow-sm;
+  .surface-raised {
+    @apply bg-[#111111] border border-[#262626];
   }
 
-  .glow-text {
-    /* Subtle glow removed for cleaner look, or made extremely minimal */
-    text-shadow: none;
+  .surface-elevated {
+    @apply bg-[#1A1A1A] border border-[#262626];
   }
-  
-  .terminal-input {
-    @apply bg-black border border-border/50 focus:border-primary/50 focus:ring-1 focus:ring-primary/30 rounded-lg transition-all duration-300;
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .fade-in-up {
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  .fade-in-up-delay-1 { animation-delay: 80ms; }
+  .fade-in-up-delay-2 { animation-delay: 160ms; }
+  .fade-in-up-delay-3 { animation-delay: 240ms; }
+  .fade-in-up-delay-4 { animation-delay: 320ms; }
+
+  .stagger-children > * {
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 80ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 160ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 240ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 320ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 400ms; }
+  .stagger-children > *:nth-child(7) { animation-delay: 480ms; }
+  .stagger-children > *:nth-child(8) { animation-delay: 560ms; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer utilities {
+  .font-serif {
+    font-family: var(--font-newsreader), 'Georgia', serif;
+  }
+
+  .tracking-tightest {
+    letter-spacing: -0.04em;
+  }
+
+  .leading-snug {
+    line-height: 1.25;
   }
 }

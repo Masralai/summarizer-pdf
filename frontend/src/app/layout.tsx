@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { Syne, Geist_Mono } from "next/font/google";
+import { Newsreader, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const syne = Syne({
-  variable: "--font-syne",
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
   subsets: ["latin"],
+  style: ["normal", "italic"],
+  weight: ["400", "500", "600"],
 });
 
 const geistMono = Geist_Mono({
@@ -13,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Summarizer PDF | Precision Analysis",
-  description: "High-precision PDF summarization using advanced algorithms.",
+  title: "Summarizer | Precision PDF Analysis",
+  description: "Condense PDF documents into concise summaries using multiple NLP algorithms.",
 };
 
 export default function RootLayout({
@@ -25,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${syne.variable} ${geistMono.variable} antialiased bg-background text-foreground selection:bg-[#0F766E]/30 selection:text-[#0F766E] font-sans`}
+        className={`${newsreader.variable} ${geistMono.variable} antialiased bg-background text-foreground font-sans`}
       >
         {children}
       </body>

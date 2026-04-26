@@ -2,172 +2,157 @@
 
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import { 
-  FileText, 
-  Settings2, 
-  Zap, 
-  Download, 
-  Copy, 
-  RefreshCcw, 
-  CheckCircle2, 
-  AlertCircle,
-  BarChart3,
-  FileSearch,
-  Cpu
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
+import { ErrorBoundary } from "@/components/error-boundary";
+import type {
+  SummaryStats,
+  SummaryResponse,
+  ErrorResponse,
+  Algorithm,
+} from "@/types/api";
 
-// --- Types ---
+const ALGORITHMS = [
+  {
+    id: "frequency" as Algorithm,
+    label: "Frequency",
+    sub: "Fast, word frequency ranking",
+  },
+  {
+    id: "tfidf" as Algorithm,
+    label: "TF-IDF",
+    sub: "Statistical importance scoring",
+  },
+  {
+    id: "textrank" as Algorithm,
+    label: "TextRank",
+    sub: "Graph-based sentence similarity",
+  },
+  {
+    id: "llm" as Algorithm,
+    label: "Neural",
+    sub: "AI generation",
+  },
+];
 
-interface SummaryStats {
-  original_length: number;
-  summary_length: number;
-  original_word_count: number;
-  summary_word_count: number;
-  original_sentences: number;
-  summary_sentences: number;
-  compression_ratio: number;
-}
-
-interface SummaryResp {
-  success: boolean;
-  filename: string;
-  summary: string;
-  algorithm_used: string;
-  statistics: SummaryStats;
-  params: {
-    algorithm: string;
-    num_sentences: number;
-  };
-}
-
-// --- Minimalist Particle Background ---
-
-const ParticleBackground = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+const AmbientBackground = () => {
+  const blobRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
     let animationFrameId: number;
-    let particles: { x: number; y: number; size: number; speedX: number; speedY: number; opacity: number }[] = [];
+    let t = 0;
 
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      initParticles();
-    };
-
-    const initParticles = () => {
-      particles = [];
-      const particleCount = Math.floor((canvas.width * canvas.height) / 15000);
-      for (let i = 0; i < particleCount; i++) {
-        particles.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          size: Math.random() * 1.5 + 0.5,
-          speedX: (Math.random() - 0.5) * 0.2,
-          speedY: (Math.random() - 0.5) * 0.2,
-          opacity: Math.random() * 0.5 + 0.2,
-        });
+    const animate = () => {
+      t += 0.0003;
+      if (blobRef.current) {
+        const x = 50 + Math.sin(t) * 20;
+        const y = 50 + Math.cos(t * 0.7) * 15;
+        blobRef.current.style.background = `radial-gradient(ellipse 60% 50% at ${x}% ${y}%, rgba(212,165,116,0.025) 0%, transparent 70%)`;
       }
+      animationFrameId = requestAnimationFrame(animate);
     };
 
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#0F766E";
-      
-      particles.forEach((p) => {
-        ctx.globalAlpha = p.opacity;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-
-        p.x += p.speedX;
-        p.y += p.speedY;
-
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
-      });
-
-      animationFrameId = requestAnimationFrame(draw);
-    };
-
-    window.addEventListener("resize", resize);
-    resize();
-    draw();
-
-    return () => {
-      window.removeEventListener("resize", resize);
-      cancelAnimationFrame(animationFrameId);
-    };
+    animate();
+    return () => cancelAnimationFrame(animationFrameId);
   }, []);
 
-  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0" />;
+  return (
+    <div
+      ref={blobRef}
+      className="fixed inset-0 pointer-events-none z-0"
+      style={{
+        background:
+          "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(212,165,116,0.025) 0%, transparent 70%)",
+      }}
+    />
+  );
 };
 
-// --- Animation Helper ---
-const AnimationStyles = () => (
-  <style jsx global>{`
-    @keyframes fadeInDown {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in-down { animation: fadeInDown 0.6s ease-out forwards; }
-    .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
-  `}</style>
+const StatusBadge = ({
+  status,
+}: {
+  status: "online" | "offline" | "loading";
+}) => {
+  const map = {
+    online: { label: "System Online", className: "text-[#D4A574]" },
+    offline: { label: "System Offline", className: "text-[#DC2626]" },
+    loading: { label: "Checking Status", className: "text-[#737373]" },
+  };
+  const s = map[status];
+  return (
+    <span
+      className={`text-[10px] font-mono uppercase tracking-[0.12em] ${s.className}`}
+    >
+      {s.label}
+    </span>
+  );
+};
+
+const StatCard = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) => (
+  <div className="surface-raised p-5 rounded-[8px]">
+    <div className="text-2xl font-medium text-[#E5E5E5] tracking-tightest font-serif leading-snug mb-1">
+      {value}
+    </div>
+    <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#737373]">
+      {label}
+    </div>
+  </div>
 );
 
-// --- Main Application ---
-
 export default function Home() {
-  // State
   const [file, setFile] = useState<File | null>(null);
   const [summary, setSummary] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
-  const [algorithm, setAlgorithm] = useState<string>("frequency");
+  const [algorithm, setAlgorithm] = useState<Algorithm>("llm");
   const [numSentences, setNumSentences] = useState<number>(3);
+  const [isDragging, setIsDragging] = useState(false);
+  const sliderRef = useRef<HTMLDivElement>(null);
   const [summaryStats, setSummaryStats] = useState<SummaryStats | null>(null);
   const [algorithmUsed, setAlgorithmUsed] = useState<string>("");
   const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [isCopied, setIsCopied] = useState(false);
-  const [isBackendUp, setIsBackendUp] = useState<boolean | null>(null);
+  const [isBackendUp, setIsBackendUp] = useState<"online" | "offline" | "loading">(
+    "loading"
+  );
 
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  const apiBaseUrl =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-  // Check backend health on mount
   useEffect(() => {
     const checkHealth = async () => {
       try {
         await axios.get(`${apiBaseUrl}/health`, { timeout: 5000 });
-        setIsBackendUp(true);
-      } catch (err) {
-        console.error("Backend unreachable:", err);
-        setIsBackendUp(false);
+        setIsBackendUp("online");
+      } catch {
+        setIsBackendUp("offline");
       }
     };
     checkHealth();
   }, [apiBaseUrl]);
 
-  // Handlers
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0] || null;
-    if (selectedFile && selectedFile.type !== "application/pdf") {
-      setError("Please select a valid PDF file");
+    if (!selectedFile) return;
+
+    if (selectedFile.type !== "application/pdf") {
+      setError("Please select a valid PDF file.");
+      setFile(null);
       return;
     }
+
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (selectedFile.size > MAX_SIZE) {
+      setError("File too large. Maximum size is 10MB.");
+      setFile(null);
+      return;
+    }
+
     setFile(selectedFile);
     setSummary("");
     setError("");
@@ -175,7 +160,7 @@ export default function Home() {
 
   const handleSubmit = async () => {
     if (!file) {
-      setError("Please select a PDF file first");
+      setError("Please select a PDF file first.");
       return;
     }
 
@@ -187,21 +172,18 @@ export default function Home() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("algorithm", algorithm);
-      formData.append("num_sentences", num_sentences.toString());
+      formData.append("num_sentences", numSentences.toString());
 
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-
-      const response = await axios.post<SummaryResp>(
+      const response = await axios.post<SummaryResponse>(
         `${apiBaseUrl}/summarize`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
-
           onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
+            const pct = Math.round(
               (progressEvent.loaded * 100) / (progressEvent.total || 1)
             );
-            setUploadProgress(percentCompleted);
+            setUploadProgress(pct);
           },
         }
       );
@@ -211,16 +193,16 @@ export default function Home() {
         setSummaryStats(response.data.statistics);
         setAlgorithmUsed(response.data.algorithm_used);
       } else {
-        setError("Failed to generate summary");
+        setError("Failed to generate summary.");
       }
-    } catch (error: unknown) {
-      console.error("Error processing PDF:", error);
-      if (axios.isAxiosError(error)) {
-        setError(error.response?.data?.error || "Server error occurred");
-      } else if (error instanceof Error) {
-        setError(error.message || "An unexpected error occurred");
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data as ErrorResponse | undefined;
+        setError(data?.error || "Server error occurred.");
+      } else if (err instanceof Error) {
+        setError(err.message || "An unexpected error occurred.");
       } else {
-        setError("An unexpected error occurred");
+        setError("An unexpected error occurred.");
       }
     } finally {
       setIsLoading(false);
@@ -230,220 +212,309 @@ export default function Home() {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(summary);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const downloadSummary = () => {
-    const element = document.createElement("a");
-    const fileBlob = new Blob([summary], { type: "text/plain" });
-    element.href = URL.createObjectURL(fileBlob);
-    element.download = `${file?.name.replace(".pdf", "") || "document"}_summary.txt`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(
+      new Blob([summary], { type: "text/plain" })
+    );
+    a.download = `${file?.name.replace(".pdf", "") || "document"}_summary.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
-  return (
-    <div className="relative min-h-screen bg-[#050505] selection:bg-[#0F766E]/30 selection:text-[#0F766E]">
-      <AnimationStyles />
-      <ParticleBackground />
+  const fileSizeLabel = file
+    ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
+    : null;
 
-      <main className="relative z-10 container mx-auto px-6 py-20 max-w-5xl">
-        {/* Header Section */}
-        <header className="mb-20 text-center animate-fade-in-down">
-          <div className="flex justify-center mb-6">
-            {isBackendUp === false && (
-              <div className="bg-red-500/10 border border-red-500/20 px-4 py-1.5 rounded-full flex items-center text-[10px] font-bold text-red-400 uppercase tracking-widest animate-pulse">
-                <AlertCircle className="w-3 h-3 mr-2" />
-                System Offline • AI Services Unavailable
-              </div>
-            )}
-            {isBackendUp === true && (
-              <div className="bg-[#0F766E]/10 border border-[#0F766E]/20 px-4 py-1.5 rounded-full flex items-center text-[10px] font-bold text-[#0F766E] uppercase tracking-widest">
-                <CheckCircle2 className="w-3 h-3 mr-2" />
-                Systems Operational • AI Ready
-              </div>
-            )}
+  return (
+    <div className="relative min-h-screen bg-[#0A0A0A] editorial-grid">
+      <AmbientBackground />
+
+      <main className="relative z-10 max-w-5xl mx-auto px-8 py-24 lg:py-32">
+        {/* Header */}
+        <header className="mb-20">
+          <div className="flex items-center justify-between mb-10 fade-in-up">
+            <StatusBadge status={isBackendUp} />
+            <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#737373]">
+              PDF Analysis
+            </span>
           </div>
-          <h1 className="text-6xl sm:text-8xl font-bold mb-4 tracking-tighter text-white">
-            SUMMARIZER<span className="text-[#0F766E]">.</span>
+
+          <h1
+            className="font-serif text-6xl lg:text-8xl font-medium tracking-tightest leading-snug text-[#E5E5E5] fade-in-up fade-in-up-delay-1"
+            style={{ letterSpacing: "-0.04em" }}
+          >
+            Summarizer.
           </h1>
+          <p className="mt-5 text-sm text-[#737373] leading-relaxed max-w-md fade-in-up fade-in-up-delay-2">
+            Upload a PDF and choose an algorithm to generate a concise,
+            structured summary in seconds.
+          </p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Sidebar / Settings */}
-          <aside className="lg:col-span-4 space-y-8">
-            <div className="glass-card p-8 rounded-2xl">
-              <div className="flex items-center mb-8">
-                <Settings2 className="w-4 h-4 text-[#0F766E] mr-3" />
-                <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-white/70">Configuration</h2>
+        {/* Workspace Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Sidebar — Configuration */}
+          <aside className="lg:col-span-4 space-y-4 stagger-children">
+            <div className="surface-elevated p-7 rounded-[8px]">
+              <p className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#737373] mb-6">
+                Configuration
+              </p>
+
+              <div className="space-y-2">
+                {ALGORITHMS.map((alg) => (
+                  <button
+                    key={alg.id}
+                    onClick={() => setAlgorithm(alg.id)}
+                    className={`w-full text-left p-4 rounded-[6px] border transition-all duration-200 ${
+                      algorithm === alg.id
+                        ? "bg-[#111111] border-[#262626] border-[#D4A574]/40"
+                        : "bg-transparent border-[#1A1A1A] hover:border-[#262626]"
+                    }`}
+                  >
+                    <div className="text-sm font-medium text-[#E5E5E5]">
+                      {alg.label}
+                    </div>
+                    <div className="text-[11px] text-[#737373] mt-0.5">
+                      {alg.sub}
+                    </div>
+                  </button>
+                ))}
               </div>
-              
-              <div className="space-y-8">
-                <div>
-                  <label className="block text-[10px] font-bold text-muted-foreground mb-4 uppercase tracking-widest">Algorithm</label>
-                  <div className="space-y-2">
-                    {[
-                      { id: "frequency", name: "Frequency", icon: BarChart3 },
-                      { id: "tfidf", name: "TF-IDF", icon: Cpu },
-                      { id: "textrank", name: "TextRank", icon: FileSearch },
-                      { id: "llm", name: "Neural", icon: Zap },
-                    ].map((alg) => (
-                      <button
-                        key={alg.id}
-                        onClick={() => setAlgorithm(alg.id)}
-                        className={cn(
-                          "w-full flex items-center justify-between p-3.5 rounded-xl border transition-all duration-200",
-                          algorithm === alg.id 
-                            ? "bg-[#0F766E]/10 border-[#0F766E]/50 text-white" 
-                            : "bg-transparent border-white/5 text-muted-foreground hover:border-white/20"
-                        )}
-                      >
-                        <div className="flex items-center">
-                          <alg.icon className={cn("w-3.5 h-3.5 mr-3", algorithm === alg.id ? "text-[#0F766E]" : "text-muted-foreground")} />
-                          <span className="text-xs font-bold tracking-tight">{alg.name}</span>
-                        </div>
-                        {algorithm === alg.id && <div className="w-1 h-1 rounded-full bg-[#0F766E]" />}
-                      </button>
+
+              <div className="mt-6 pt-6 border-t border-[#1A1A1A]">
+                <div className="flex items-center justify-between mb-5">
+                  <p className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#737373]">
+                    Precision
+                  </p>
+                  <span className="text-[11px] font-mono text-[#D4A574]">
+                    {numSentences}
+                  </span>
+                </div>
+
+                <div
+                  ref={sliderRef}
+                  className="relative h-5 flex items-center select-none cursor-pointer"
+                  onMouseDown={() => setIsDragging(true)}
+                  onMouseMove={(e) => {
+                    if (!isDragging && !e.buttons) return;
+                    const rect = sliderRef.current?.getBoundingClientRect();
+                    if (!rect) return;
+                    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                    setNumSentences(Math.round(2 + pct * 8));
+                  }}
+                  onMouseUp={() => setIsDragging(false)}
+                  onMouseLeave={() => setIsDragging(false)}
+                  onClick={(e) => {
+                    const rect = sliderRef.current?.getBoundingClientRect();
+                    if (!rect) return;
+                    const pct = (e.clientX - rect.left) / rect.width;
+                    setNumSentences(Math.round(2 + pct * 8));
+                  }}
+                >
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full h-[2px] bg-[#1A1A1A] rounded-full" />
+                  </div>
+                  <div
+                    className="absolute left-0 top-1/2 -translate-y-1/2 h-[2px] bg-[#D4A574] rounded-full pointer-events-none"
+                    style={{
+                      width: `${((numSentences - 2) / 8) * 100}%`,
+                    }}
+                  />
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#D4A574] border border-[#0A0A0A] transition-all duration-100 hover:scale-125 cursor-pointer"
+                    style={{
+                      left: `calc(${((numSentences - 2) / 8) * 100}% - 6px)`,
+                    }}
+                  />
+                  <div className="relative w-full flex justify-between px-[6px]">
+                    {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                      <div
+                        key={n}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setNumSentences(n);
+                        }}
+                        className={`w-1 h-1 rounded-full transition-colors duration-150 ${
+                          numSentences >= n
+                            ? "bg-[#D4A574]"
+                            : "bg-[#333333]"
+                        }`}
+                      />
                     ))}
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Precision</label>
-                    <span className="text-[10px] font-mono text-[#0F766E] font-bold uppercase">{numSentences} Sentences</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="2"
-                    max="10"
-                    value={numSentences}
-                    onChange={(e) => setNumSentences(parseInt(e.target.value))}
-                    className="w-full h-1 bg-white/5 rounded-lg appearance-none cursor-pointer accent-[#0F766E]"
-                  />
+                <div className="flex justify-between mt-2">
+                  <span className="text-[9px] font-mono text-[#4A4A4A]">2</span>
+                  <span className="text-[9px] font-mono text-[#4A4A4A]">10</span>
                 </div>
               </div>
             </div>
           </aside>
 
-          {/* Main Workspace */}
-          <div className="lg:col-span-8 space-y-10">
+          {/* Main — Upload + Results */}
+          <div className="lg:col-span-8 space-y-4">
             {/* Upload Zone */}
-            <div className={cn(
-              "glass-card p-12 rounded-3xl border border-dashed transition-all duration-300 relative group",
-              file ? "border-[#0F766E]/40 bg-[#0F766E]/5" : "border-white/10 hover:border-white/20"
-            )}>
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFileChange}
-                className="absolute inset-0 opacity-0 cursor-pointer z-20"
-              />
-              <div className="relative z-10 flex flex-col items-center justify-center text-center">
-                <div className={cn(
-                  "w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all duration-300",
-                  file ? "bg-[#0F766E]/20" : "bg-white/5 group-hover:bg-white/10"
-                )}>
-                  <FileText className={cn("w-6 h-6", file ? "text-[#0F766E]" : "text-muted-foreground")} />
-                </div>
-                
+            <ErrorBoundary>
+              <div
+                className={`surface-elevated p-10 rounded-[8px] border transition-all duration-300 ${
+                  file
+                    ? "border-[#262626]"
+                    : "border-dashed border-[#262626] hover:border-[#333333]"
+                }`}
+              >
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                  style={{ position: "absolute", width: "1px", height: "1px" }}
+                />
+
                 {file ? (
-                  <div className="space-y-1">
-                    <p className="text-white font-bold text-lg">{file.name}</p>
-                    <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">{(file.size / 1024 / 1024).toFixed(2)} MB • READY</p>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-[#E5E5E5] mb-1">
+                        {file.name}
+                      </div>
+                      <div className="text-[11px] font-mono text-[#737373]">
+                        {fileSizeLabel}
+                      </div>
+                    </div>
+                    <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#D4A574]">
+                      Ready
+                    </div>
                   </div>
                 ) : (
-                  <div className="space-y-1">
-                    <p className="text-white font-bold text-lg">Select PDF</p>
-                    <p className="text-muted-foreground text-xs font-medium">Click or drag and drop to analyze</p>
+                  <div className="text-center">
+                    <div className="text-sm text-[#737373]">
+                      Drop a PDF or click to select
+                    </div>
+                    <div className="text-[11px] text-[#4A4A4A] mt-1 font-mono">
+                      PDF files up to 10MB
+                    </div>
                   </div>
                 )}
-              </div>
 
-              {isLoading && uploadProgress > 0 && (
-                <div className="mt-10 space-y-3">
-                  <Progress value={uploadProgress} className="h-1 bg-white/5" />
-                  <p className="text-[10px] font-bold text-center text-[#0F766E] uppercase tracking-widest">Analyzing {uploadProgress}%</p>
+                {isLoading && uploadProgress > 0 && (
+                  <div className="mt-6">
+                    <Progress value={uploadProgress} />
+                    <div className="text-[10px] font-mono text-center text-[#737373] mt-2 uppercase tracking-[0.1em]">
+                      Processing {uploadProgress}%
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-6 flex justify-end">
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!file || isLoading}
+                    size="lg"
+                    className="bg-[#E5E5E5] text-[#0A0A0A] hover:bg-[#D5D5D5] active:scale-[0.98]"
+                  >
+                    {isLoading ? (
+                      <span className="font-mono text-xs">Processing</span>
+                    ) : (
+                      <span className="text-sm">Generate Summary</span>
+                    )}
+                  </Button>
                 </div>
-              )}
-
-              <div className="mt-10 flex justify-center">
-                <Button 
-                  onClick={handleSubmit}
-                  disabled={!file || isLoading}
-                  className="bg-[#0F766E] hover:bg-[#0F766E]/90 text-white px-12 h-12 rounded-xl font-bold tracking-tight transition-all duration-200 disabled:opacity-30"
-                >
-                  {isLoading ? (
-                    <RefreshCcw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    "Process Document"
-                  )}
-                </Button>
               </div>
-            </div>
+            </ErrorBoundary>
 
-            {/* Error Message */}
+            {/* Error */}
             {error && (
-              <div className="bg-red-500/5 border border-red-500/20 p-4 rounded-xl flex items-center text-red-400 text-xs font-bold uppercase tracking-wider">
-                <AlertCircle className="w-4 h-4 mr-3 flex-shrink-0" />
-                {error}
+              <div className="surface-elevated p-4 rounded-[6px] border border-[#262626]">
+                <p className="text-xs text-[#DC2626]">{error}</p>
               </div>
             )}
 
-            {/* Result Area */}
+            {/* Result */}
             {summary && (
-              <div className="animate-fade-in-up space-y-8">
-                <div className="glass-card rounded-3xl overflow-hidden">
-                  <div className="bg-white/[0.02] px-8 py-4 border-b border-white/5 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Summary Result</span>
-                    <div className="flex items-center space-x-3">
-                      <button onClick={copyToClipboard} className="text-[10px] font-bold text-[#0F766E] hover:text-[#0F766E]/80 transition-colors uppercase tracking-widest flex items-center">
-                        {isCopied ? <CheckCircle2 className="w-3 h-3 mr-1.5" /> : <Copy className="w-3 h-3 mr-1.5" />}
-                        {isCopied ? "Copied" : "Copy"}
+              <ErrorBoundary>
+                <div className="surface-raised rounded-[8px] overflow-hidden fade-in-up">
+                  <div className="flex items-center justify-between px-7 py-5 border-b border-[#1A1A1A]">
+                    <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#737373]">
+                      Summary
+                    </span>
+                    <div className="flex items-center gap-6">
+                      <button
+                        onClick={copyToClipboard}
+                        className="text-[10px] font-mono uppercase tracking-[0.1em] text-[#737373] hover:text-[#D4A574] transition-colors"
+                      >
+                        Copy
                       </button>
-                      <button onClick={downloadSummary} className="text-[10px] font-bold text-white/60 hover:text-white transition-colors uppercase tracking-widest flex items-center">
-                        <Download className="w-3 h-3 mr-1.5" />
+                      <button
+                        onClick={downloadSummary}
+                        className="text-[10px] font-mono uppercase tracking-[0.1em] text-[#737373] hover:text-[#E5E5E5] transition-colors"
+                      >
                         Export
                       </button>
                     </div>
                   </div>
-                  
-                  <div className="p-10">
-                    <p className="text-white/80 leading-[1.8] text-lg font-medium tracking-tight">
+
+                  <div className="px-7 py-8">
+                    <p className="text-[15px] leading-[1.8] text-[#C8C8C8]">
                       {summary}
                     </p>
-                    
-                    {algorithmUsed && (
-                      <div className="mt-10 pt-8 border-t border-white/5 flex justify-between items-center text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">
-                        <span>Engine: {algorithmUsed}</span>
-                        <span>Complexity: {numSentences} Sentences</span>
-                      </div>
-                    )}
+
+                    <div className="mt-10 pt-6 border-t border-[#1A1A1A] flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#737373]">
+                        Engine:{" "}
+                        <span className="text-[#E5E5E5]">{algorithmUsed}</span>
+                      </span>
+                      <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#737373]">
+                        Sentences:{" "}
+                        <span className="text-[#E5E5E5]">{numSentences}</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Statistics Grid */}
+                {/* Stats */}
                 {summaryStats && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[
-                      { label: "Compress", value: `${summaryStats.compression_ratio}%` },
-                      { label: "Reduction", value: `-${Math.round((1 - summaryStats.summary_word_count / summaryStats.original_word_count) * 100)}%` },
-                      { label: "Words", value: summaryStats.summary_word_count },
-                      { label: "Sents", value: summaryStats.summary_sentences },
-                    ].map((stat, i) => (
-                      <div key={i} className="glass-card p-5 rounded-2xl text-center">
-                        <span className="block text-xl font-bold text-white mb-1 tracking-tighter">{stat.value}</span>
-                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">{stat.label}</span>
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger-children">
+                    <StatCard
+                      label="Compression"
+                      value={`${summaryStats.compression_ratio}%`}
+                    />
+                    <StatCard
+                      label="Reduction"
+                      value={`-${Math.round(
+                        (1 -
+                          summaryStats.summary_word_count /
+                            summaryStats.original_word_count) *
+                          100
+                      )}%`}
+                    />
+                    <StatCard
+                      label="Words"
+                      value={summaryStats.summary_word_count}
+                    />
+                    <StatCard
+                      label="Sentences"
+                      value={summaryStats.summary_sentences}
+                    />
                   </div>
                 )}
-              </div>
+              </ErrorBoundary>
             )}
           </div>
         </div>
+
+        {/* Footer */}
+        <footer className="mt-32 pt-8 border-t border-[#1A1A1A] flex items-center justify-between">
+          <span className="text-[10px] font-mono text-[#4A4A4A] uppercase tracking-[0.1em]">
+            Summarizer PDF Analysis
+          </span>
+          <span className="text-[10px] font-mono text-[#4A4A4A] uppercase tracking-[0.1em]">
+            Algorithms: Frequency / TF-IDF / TextRank / Neural
+          </span>
+        </footer>
       </main>
     </div>
   );

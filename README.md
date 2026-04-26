@@ -1,182 +1,340 @@
-# PDF Summarizer: AI-Powered Document Summarization
+# PDF Summarizer
 
-A full-stack web application designed to intelligently condense PDF documents into concise summaries using various Natural Language Processing (NLP) algorithms and cutting-edge AI models. Built with a modern React/Next.js frontend and a robust Flask backend.
-
----
-
-## Key Features
-
-This application empowers users to quickly grasp the essence of lengthy PDF documents through a range of powerful features:
-
-- **Diverse Summarization Algorithms:**
-  - **Frequency-Based:** Ideal for general content, focusing on most recurring terms.
-  - **TF-IDF (Term Frequency-Inverse Document Frequency):** Emphasizes unique and important words, great for technical texts.
-  - **TextRank Algorithm:** A sophisticated graph-based method for highly coherent and context-aware summaries.
-  - **Gemini 2.0 Flash API:** State-of-the-art AI-powered summarization with natural language understanding and contextual awareness.
-- **Intuitive User Interface:** A sleek, responsive, and easy-to-use experience built with React and TypeScript.
-- **Real-time Processing:** Get instant summaries thanks to efficient PDF text extraction and on-the-fly NLP.
-- **Advanced AI Integration:** Leverage Google's latest Gemini 2.0 Flash model for human-like summary generation.
-- **Robust Error Handling:** Clear feedback for invalid inputs or processing issues.
-- **Scalable RESTful API:** A well-defined backend for seamless communication and future expansion.
+A full-stack web application that condenses PDF documents into concise summaries using multiple NLP algorithms and Gemini AI. Next.js frontend + Flask backend, containerized with Docker.
 
 ---
 
-##  Get Started
+## Table of Contents
 
-Follow these simple steps to set up and run the PDF Summarizer on your local machine.
-
-### Prerequisites
-
-Ensure you have the following installed:
-
-- **Node.js**: v14 or higher (for frontend)
-- **npm** or **yarn** (for frontend package management)
-- **Python**: v3.8 or higher (for backend)
-- **pip** (Python package manager, usually comes with Python)
-- **Google AI API Key**: Required for Gemini 2.0 Flash integration
-
-### Installation Steps
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/yourusername/pdf-summarizer.git
-   cd pdf-summarizer
-   ```
-
-2. **Backend Setup:**
-
-   ```bash
-   # Navigate into the backend directory
-   cd backend
-
-   # Create a Python virtual environment
-   python -m venv venv
-
-   # Activate the virtual environment
-   # On Windows:
-   venv\Scripts\activate
-   # On macOS/Linux:
-   source venv/bin/activate
-
-   # Install Python dependencies
-   pip install -r requirements.txt
-
-   # Download necessary NLTK data (punkt for tokenization, stopwords for filtering)
-   python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
-
-   # Set up environment variables for Gemini API
-   # Create a .env file in the backend directory
-   echo "GEMINI_API_KEY=your_gemini_api_key_here" > .env
-   
-   # Start the Flask development server
-   python app.py
-   ```
-
-   The backend API will be accessible at: `http://localhost:5000`
-
-3. **Frontend Setup:**
-
-   ```bash
-   # Open a new terminal window and navigate to the frontend directory
-   cd frontend
-
-   # Install Node.js dependencies
-   npm install
-   # OR
-   yarn install
-
-   # Start the Next.js development server
-   npm run dev
-   # OR
-   yarn dev
-   ```
-
-   The frontend application will be available at: `http://localhost:3000`
-
-4. **API Key Configuration:**
-
-   To use the Gemini 2.0 Flash summarization:
-   - Visit [Google AI Studio](https://ai.google.dev/) to obtain your API key
-   - Add your API key to the `.env` file in the backend directory:
-     ```
-     GEMINI_API_KEY=your_actual_api_key_here
-     ```
+- [Features](#features)
+- [Stack](#stack)
+- [Quick Start](#quick-start)
+  - [Docker (recommended)](#docker-recommended)
+  - [Manual](#manual)
+- [Environment Variables](#environment-variables)
+- [API Reference](#api-reference)
+- [Algorithms](#algorithms)
+- [Development](#development)
+  - [Frontend](#frontend)
+  - [Backend](#backend)
+- [Testing](#testing)
+- [Project Structure](#project-structure)
 
 ---
 
-##  Technologies Utilized
+## Features
 
-This project leverages a modern and robust tech stack for both its frontend and backend components.
-
-### Frontend (User Interface)
-
-- **React 18+**: The core library for building dynamic user interfaces with Hooks.
-- **TypeScript**: Provides type safety and enhances code quality and maintainability.
-- **Next.js**: A powerful React framework for production-ready applications, enabling Server-Side Rendering (SSR) and routing.
-- **Axios**: A promise-based HTTP client for making API requests to the backend.
-- **Tailwind CSS**: A utility-first CSS framework for rapid and consistent UI development.
-
-### Backend (API & NLP Processing)
-
-- **Flask**: A lightweight and flexible Python web framework.
-- **PyPDF2**: Used for efficient extraction of text content from PDF documents.
-- **NLTK (Natural Language Toolkit)**: Essential for tokenization, stop word removal, and other NLP tasks.
-- **Scikit-learn**: Provides robust implementations for machine learning algorithms, specifically for TF-IDF calculation.
-- **NumPy**: Fundamental package for numerical computing in Python, underpinning Scikit-learn.
-- **Flask-CORS**: Handles Cross-Origin Resource Sharing, allowing the frontend to communicate with the backend.
-- **Google Generative AI**: Integration with Gemini 2.0 Flash API for advanced AI-powered summarization.
-- **python-dotenv**: Environment variable management for secure API key handling.
+- **Four summarization algorithms**: Frequency, TF-IDF, TextRank, and Gemini AI
+- **PDF text extraction** with fallback and artifact cleaning
+- **Adjustable precision** — control summary length from 2 to 10 sentences
+- **Statistics dashboard** — compression ratio, word count reduction
+- **Clipboard and text export** for summaries
+- **Backend health monitoring** — frontend shows system status at a glance
+- **Docker Compose** — one-command local deployment
 
 ---
 
-##  Summarization Algorithms Explained
+## Stack
 
-Each algorithm offers a unique approach to condensing text, making them suitable for different types of documents and desired summary characteristics.
+### Frontend
 
-| Algorithm           | How it Works                                                                                                                                      | Best Suited For                                                  | Speed              | Quality              |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------------------------------------------------------- | :----------------- | :------------------- |
-| **Frequency-Based** | Ranks sentences based on the frequency of important words.                                                                                        | General articles, quick overviews.                               | ⚡⚡⚡ (Fast)      | ⭐⭐ (Basic)         |
-| **TF-IDF**          | Evaluates word importance by comparing term frequency in a document to its inverse document frequency across a corpus.                            | Technical documents, research papers, specialized content.       | ⚡⚡ (Moderate)    | ⭐⭐⭐ (Good)        |
-| **TextRank**        | A graph-based ranking algorithm (like PageRank for text) that identifies central sentences based on their semantic similarity to other sentences. | Complex documents, highly interconnected ideas, narrative texts. | ⚡ (Comprehensive) | ⭐⭐⭐⭐ (Excellent) |
-| **Gemini 2.0 Flash** | Google's advanced multimodal AI model that understands context, nuance, and generates human-like summaries with natural language processing.      | All document types, conversational summaries, detailed analysis. | ⚡⚡ (Fast)       | ⭐⭐⭐⭐⭐ (Outstanding) |
+| Library | Version | Purpose |
+|---------|---------|---------|
+| Next.js | 15 | App router, SSR |
+| React | 19 | UI components |
+| TypeScript | 5 | Type safety |
+| Tailwind CSS | 4 | Styling |
+| shadcn/ui | — | Base components |
+| Axios | 1.9 | HTTP client |
+| Lucide | 0.518 | Icons |
+
+### Backend
+
+| Library | Version | Purpose |
+|---------|---------|---------|
+| Flask | 3.1 | REST API |
+| pypdf | 5.2 | PDF text extraction |
+| NLTK | 3.9 | Tokenization, stopwords |
+| scikit-learn | 1.6 | TF-IDF, cosine similarity |
+| NumPy | 2.2 | Numerical computing |
+| google-generativeai | 0.8 | Gemini API client |
+| Pydantic | 2.10 | Request validation |
+| Gunicorn | 23 | Production WSGI server |
+
+### Infrastructure
+
+- Docker + Docker Compose
+- GitHub Actions CI/CD
 
 ---
 
-##  Environment Variables
+## Quick Start
 
-Create a `.env` file in the backend directory with the following variables:
+### Docker (recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/summarizer-pdf.git
+cd summarizer-pdf
+
+# Configure your API key
+cp backend/.env.example backend/.env
+# Edit backend/.env and set GOOGLE_API_KEY
+
+# Start both services
+docker compose up --build
+```
+
+Frontend: [http://localhost:3000](http://localhost:3000)  
+Backend API: [http://localhost:5000](http://localhost:5000)
+
+To stop:
+
+```bash
+docker compose down
+```
+
+### Manual
+
+#### Prerequisites
+
+- **Node.js** 18+ with npm
+- **Python** 3.12 with pip
+- **Google AI API key** — get one at [ai.google.dev](https://ai.google.dev)
+
+#### Backend
+
+```bash
+cd backend
+
+# Create and activate a virtual environment
+python -m venv venv
+# macOS/Linux:
+source venv/bin/activate
+# Windows:
+venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Download NLTK data
+python setup_nltk.py
+
+# Configure environment
+cp .env.example .env
+# Edit .env — set GOOGLE_API_KEY
+
+# Run the server
+python app.py
+```
+
+#### Frontend
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Run the dev server
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+---
+
+## Environment Variables
+
+Create `backend/.env` (copy from `backend/.env.example`):
 
 ```env
-# Required for Gemini 2.0 Flash API
-GEMINI_API_KEY=your_gemini_api_key_here
+# Required
+GOOGLE_API_KEY=your_gemini_api_key_here
 
-# Optional: Flask configuration
-FLASK_ENV=development
-FLASK_DEBUG=True
+# Optional
+ALLOWED_ORIGINS=http://localhost:3000
+PORT=5000
+FLASK_DEBUG=False
+MAX_UPLOAD_SIZE_MB=10
+```
+
+| Variable | Required | Default | Description |
+|---------|----------|---------|-------------|
+| `GOOGLE_API_KEY` | Yes | — | Gemini API key from Google AI Studio |
+| `ALLOWED_ORIGINS` | No | `*` | Comma-separated CORS origins |
+| `PORT` | No | `5000` | Backend port |
+| `FLASK_DEBUG` | No | `False` | Enable Flask debug mode |
+| `MAX_UPLOAD_SIZE_MB` | No | `10` | Max PDF upload size in MB |
+
+---
+
+## API Reference
+
+### `POST /summarize`
+
+Upload a PDF and receive a summary.
+
+**Request:** `multipart/form-data`
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `file` | PDF file | required | The PDF to summarize |
+| `algorithm` | string | `llm` | `frequency`, `tfidf`, `textrank`, `llm` |
+| `num_sentences` | integer | `3` | Summary length (2–10) |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "filename": "document.pdf",
+  "summary": "The document discusses...",
+  "algorithm_used": "TF-IDF",
+  "statistics": {
+    "original_length": 12450,
+    "summary_length": 892,
+    "original_word_count": 1892,
+    "summary_word_count": 134,
+    "compression_ratio": 7.16
+  },
+  "parameters": {
+    "algorithm": "tfidf",
+    "num_sentences": 3
+  }
+}
+```
+
+**Error responses:**
+
+| Status | Body |
+|--------|------|
+| `400` | `{ "error": "No file uploaded" }` |
+| `400` | `{ "error": "Invalid file type. Please upload a PDF." }` |
+| `400` | `{ "error": "File too large. Maximum size is 10MB." }` |
+| `400` | `{ "error": "Insufficient text content in PDF for summarization." }` |
+
+### `GET /health`
+
+Service health check. Returns `200` if the service is running.
+
+```json
+{ "status": "healthy", "timestamp": "...", "service": "pdf-summarizer-backend" }
+```
+
+### `GET /status`
+
+Extended server status with available algorithms.
+
+### `GET /algorithms`
+
+Metadata about each summarization algorithm for the frontend.
+
+---
+
+## Algorithms
+
+| Algorithm | How it works | Best for | Speed | Quality |
+|-----------|-------------|---------|-------|---------|
+| **Frequency** | Ranks sentences by frequency of important words | General documents, quick summaries | Fast | Basic |
+| **TF-IDF** | Scores words by importance relative to document | Technical papers, manuals | Moderate | Good |
+| **TextRank** | Graph-based ranking by sentence similarity | Academic papers, narratives | Slow | Excellent |
+| **Neural (Gemini)** | Generative AI with contextual understanding | All document types | Fast | Outstanding |
+
+**Recommendation:** Use **Frequency** for speed, **TextRank** for quality on academic papers, and **Neural** for the best overall results.
+
+---
+
+## Development
+
+### Frontend
+
+```bash
+cd frontend
+
+npm run dev          # Dev server with Turbopack
+npm run build        # Production build
+npm run lint         # ESLint
+npm run typecheck    # TypeScript check
+npm run format       # Format with Prettier
+npm run test         # Run Vitest tests (watch mode)
+npm run test:run     # Run tests once
+```
+
+### Backend
+
+```bash
+cd backend
+
+# With venv activated
+python app.py              # Development server
+gunicorn app:app           # Production server
+
+# Run tests
+python -m pytest tests/ -v
 ```
 
 ---
 
-##  Usage Tips
+## Testing
 
-### Choosing the Right Algorithm:
+### Frontend (Vitest)
 
-- **Quick Overviews**: Use **Frequency-Based** for fast, basic summaries
-- **Technical Documents**: Use **TF-IDF** for research papers, manuals, and specialized content
-- **Academic Papers**: Use **TextRank** for papers with interconnected concepts
-- **Best Quality**: Use **Gemini 2.0 Flash** for the most natural, contextually aware summaries
-- **All-Purpose**: **Gemini 2.0 Flash** works excellently across all document types
+```bash
+cd frontend
+npm run test:run
+```
 
-### Performance Considerations:
+5 unit tests covering page rendering, algorithm selection, upload zone, and form state.
 
-- Traditional algorithms (Frequency, TF-IDF, TextRank) process documents locally
-- Gemini 2.0 Flash requires internet connection and API quota
-- For large documents, consider chunking strategies when using the Gemini API
+### Backend (pytest)
+
+```bash
+cd backend
+python -m pytest tests/ -v
+```
+
+31 tests covering:
+- All 4 summarization algorithms
+- Request validation (pydantic schemas)
+- API routes (health, status, algorithms, summarize)
+- File validation (type, size, empty)
 
 ---
 
-##  Contributing
+## Project Structure
 
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
+```
+summarizer-pdf/
+├── .github/
+│   └── workflows/
+│       └── ci.yml              # GitHub Actions CI/CD
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── page.tsx       # Main application component
+│   │   │   ├── layout.tsx     # Root layout with fonts
+│   │   │   └── globals.css    # Tailwind + custom styles
+│   │   ├── components/
+│   │   │   ├── error-boundary.tsx
+│   │   │   └── ui/            # shadcn/ui base components
+│   │   ├── lib/
+│   │   │   └── utils.ts       # Utility functions
+│   │   └── types/
+│   │       └── api.ts         # Shared API type definitions
+│   ├── vitest.config.ts
+│   ├── package.json
+│   └── Dockerfile
+├── backend/
+│   ├── app.py                # Flask app + routes
+│   ├── adv_summ.py           # Summarization algorithms
+│   ├── schemas.py            # Pydantic validation
+│   ├── setup_nltk.py         # NLTK data download script
+│   ├── requirements.txt
+│   ├── pytest.ini
+│   ├── tests/                # pytest suite
+│   └── Dockerfile
+├── docker-compose.yml
+├── .gitignore
+└── README.md
+```

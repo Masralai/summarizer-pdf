@@ -3,19 +3,21 @@ Advanced summarization algorithms for better PDF summaries
 This module implements TF-IDF and TextRank algorithms alongside the basic frequency method
 """
 import os
+import logging
+import re
 from dotenv import load_dotenv
 import nltk
 from nltk.corpus import stopwords
-from nltk.tokenize import sent_tokenize,word_tokenize
-from nltk.probability import  FreqDist
+from nltk.tokenize import sent_tokenize, word_tokenize
+from nltk.probability import FreqDist
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import google.generativeai as genai
 import numpy as np
-import re
 from collections import Counter
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 class AdvSummarizer:
@@ -36,7 +38,7 @@ class AdvSummarizer:
         self.model = None
         if self.google_api_key:
             genai.configure(api_key=self.google_api_key)
-            self.model = genai.GenerativeModel(model_name="gemini-2.0-flash")
+            self.model = genai.GenerativeModel("gemini-2.0-flash-exp")
         
     def clean_text(self,text):
         # white space, PDF artifacts, page numbers removed
@@ -45,6 +47,15 @@ class AdvSummarizer:
         text = re.sub(r'\d+/\d+', '', text)
         
         return text
+
+    def _prepare_sentences(self, sentences):
+        cleaned = []
+        for sentence in sentences:
+            clean = re.sub(r'[^\w\s]', '', sentence.lower())
+            words = word_tokenize(clean)
+            filtered = [w for w in words if w not in self.stop_words and w.isalpha()]
+            cleaned.append(' '.join(filtered))
+        return cleaned
     
     def frequency_summarize(self,text,num_sentences =3):
         """
@@ -55,7 +66,7 @@ class AdvSummarizer:
             # clean text 
             text= self.clean_text(text)
             sentences = sent_tokenize(text) #Returns sentence-tokenized copy of text ; splits text into sentences
-            print(f"Found {len(sentences)} sentences in the document")
+            logger.info(f"Found {len(sentences)} sentences in the document")
 
             if len(sentences)<= num_sentences:
                 return ' '.join(sentences)
@@ -63,12 +74,12 @@ class AdvSummarizer:
             #tokenize and filter
             words = word_tokenize(text.lower()) #splits text into individual words 
             filtered_words = [word for word in words if word.isalpha() and word not in self.stop_words]
-            print(f"Filtered {len(words)} words down to {len(filtered_words)} meaningful words")
+            logger.info(f"Filtered {len(words)} words down to {len(filtered_words)} meaningful words")
             
             #Calculate word frequencies
             word_freq = FreqDist(filtered_words)
             most_common_words = word_freq.most_common(10) #most common words , probably most imp topic
-            print(f"Most common words: {most_common_words}")
+            logger.debug(f"Most common words: {most_common_words}")
 
             #sentence scoring based on imp words
             sentence_scores = {}
@@ -99,7 +110,7 @@ class AdvSummarizer:
             return ' '.join(ordered_sentences)
 
         except Exception as e:
-            print(f"Error in summarization: {str(e)}")
+            logger.error(f"Error in summarization: {str(e)}")
             raise Exception(f"Failed to create summary:{str(e)}")
 
     def tfidf_summarize(self,text,num_sentences=3):
@@ -116,13 +127,7 @@ class AdvSummarizer:
             if len(sentences)<= num_sentences:
                 return ' '.join(sentences)
             
-            #Clean sentences for TF-IDF processing
-            cleaned_sentences = []
-            for sentence in sentences:
-                clean_sentences = re.sub(r'[^\w\s]','',sentence.lower()) #punctuation and convert to lowercase removal
-                words = word_tokenize(clean_sentences)
-                filtered_words = [word for word in words if word not in self.stop_words and word.isalpha()]
-                cleaned_sentences.append(' '.join(filtered_words))
+            cleaned_sentences = self._prepare_sentences(sentences)
             
             #TF-IDF matrix calculation
             vectorizer = TfidfVectorizer(max_features=100) #Limit features for performance
@@ -154,12 +159,7 @@ class AdvSummarizer:
             if len(sentences) <= num_sentences:
                 return ' '.join(sentences)
             
-            cleaned_sentences = []
-            for sentence in sentences:
-                clean_sentences = re.sub(r'[^\w\s]','',sentence.lower()) #punctuation and convert to lowercase removal
-                words = word_tokenize(clean_sentences)
-                filtered_words = [word for word in words if word not in self.stop_words and word.isalpha()]
-                cleaned_sentences.append(' '.join(filtered_words))
+            cleaned_sentences = self._prepare_sentences(sentences)
             
             # TFIDF vectors for similarity calc
             vectorizer = TfidfVectorizer()
@@ -195,26 +195,26 @@ class AdvSummarizer:
             raise Exception(f"TextRank summarization failed : {str(e)}")
     
         
-    def llm_summarizer(self,text,num_sentences=3):
+    def llm_summarizer(self, text, num_sentences=3):
         if not self.model:
             return "Neural summarization is not configured. Please provide a GOOGLE_API_KEY."
-        
+
         try:
-            prompt = f"""Please read the following document text and provide a comprehensive, concise summary. 
-                        Highlight the main arguments, key findings, important conclusions, and any significant data points. 
-                        Organize the summary into clear, readable paragraphs. Also get direct to-the-point and instead of 'here is a summary...'
+            prompt = f"""Please read the following document text and provide a comprehensive, concise summary.
+                        Highlight the main arguments, key findings, important conclusions, and any significant data points.
+                        Organize the summary into clear, readable paragraphs. Be direct — avoid phrases like 'here is a summary'.
                         {text}
                         """
             response = self.model.generate_content(
-                    prompt,
-                    generation_config=genai.GenerationConfig(
-                        temperature=0.4, # Lower temperature for more factual, less creative summary
-                        max_output_tokens=1024*num_sentences #  summary length
-                    )
+                prompt,
+                generation_config=genai.GenerationConfig(
+                    temperature=0.4,
+                    max_output_tokens=1024 * num_sentences,
+                ),
             )
             return response.text
         except Exception as e:
-            print(f"Error summarizing text with Gemini: {e}")
+            logger.error(f"Error summarizing text with Gemini: {e}")
             return f"Failed to generate summary due to an API error: {e}"
    
     
