@@ -1,0 +1,39 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp.*
+.yarn/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Testing
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment
+.env
+.env.*
+.vercel
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+context.md

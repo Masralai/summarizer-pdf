@@ -107,25 +107,21 @@ docker compose down
 ```bash
 cd backend
 
-# Create and activate a virtual environment
-python -m venv venv
-# macOS/Linux:
-source venv/bin/activate
-# Windows:
-venv\Scripts\activate
+# Install uv if not already installed
+# curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (uv creates .venv automatically)
+uv sync
 
 # Download NLTK data
-python setup_nltk.py
+uv run python setup_nltk.py
 
 # Configure environment
 cp .env.example .env
 # Edit .env — set GOOGLE_API_KEY
 
 # Run the server
-python app.py
+uv run python app.py
 ```
 
 #### Frontend
@@ -266,12 +262,14 @@ npm run test:run     # Run tests once
 ```bash
 cd backend
 
-# With venv activated
-python app.py              # Development server
-gunicorn app:app           # Production server
+# Run development server
+uv run python app.py
+
+# Run production server
+uv run gunicorn app:app
 
 # Run tests
-python -m pytest tests/ -v
+uv run python -m pytest tests/ -v
 ```
 
 ---

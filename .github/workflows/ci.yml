@@ -45,23 +45,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
-          python-version: "3.12"
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
 
       - name: Install dependencies
-        run: |
-          pip install -r backend/requirements.txt
-          pip install ruff
+        run: uv sync --all-extras
+        working-directory: backend
 
       - name: Lint
-        run: ruff check backend/
+        run: uv run ruff check .
+        working-directory: backend
 
       - name: Run tests
-        run: python -m pytest backend/tests/ -v
+        run: uv run python -m pytest tests/ -v
+        working-directory: backend
 
       - name: Type-check Python
-        run: pip install mypy && python -m mypy backend/
+        run: uv run mypy .
+        working-directory: backend
 
   docker-build:
     name: Docker Build

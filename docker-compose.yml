@@ -1,4 +1,4 @@
-# for development convenience only
+# For development convenience only
 
 services:
   backend:
@@ -8,16 +8,28 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - FLASK_DEBUG=True
     volumes:
       - ./backend:/app
-    restart: always
+      - /app/.venv  # Exclude .venv from mount to preserve container dependencies
+    networks:
+      - app-network
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   frontend:
     build:
@@ -27,7 +39,22 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:5000
+      - NODE_ENV=development
     depends_on:
       backend:
         condition: service_healthy
-    restart: always
+    networks:
+      - app-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+networks:
+  app-network:
+    driver: bridge
